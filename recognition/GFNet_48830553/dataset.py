@@ -122,3 +122,33 @@ def _load_test_samples(test_dir=DATA_TEST_PATH):
                 test_samples.append((img_path, label))
 
     return test_samples
+
+
+def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=32, num_workers=2, split_ratio=0.8, seed=42):
+    """
+    Creates and returns PyTorch DataLoaders for training, validation, and testing.
+
+    Args:
+        train_dir (str): Directory containing training 'AD' and 'NC' subdirectories.
+        test_dir (str): Directory containing test 'AD' and 'NC' subdirectories.
+        batch_size (int): Batch size for DataLoader.
+        num_workers (int): Number of worker threads for DataLoader.
+        split_ratio (float): Patient split ratio for training data (default: 0.8).
+        seed (int): Seed for patient splitting.
+
+    Returns:
+        tuple: (train_loader, val_loader, test_loader)
+    """
+    train_transform, eval_transform = data_preprocess()
+    train_samples, val_samples = data_split(train_dir=train_dir, split_ratio=split_ratio, seed=seed)
+    test_samples = _load_test_samples(test_dir=test_dir)
+
+    train_dataset = ADNIDataset(train_samples, transform=train_transform)
+    val_dataset = ADNIDataset(val_samples, transform=eval_transform)
+    test_dataset = ADNIDataset(test_samples, transform=eval_transform)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    return train_loader, val_loader, test_loader
