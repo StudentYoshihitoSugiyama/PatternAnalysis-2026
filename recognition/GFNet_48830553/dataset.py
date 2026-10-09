@@ -99,3 +99,26 @@ def data_split(train_dir=DATA_TRAIN_PATH, split_ratio=0.8, seed=42):
             val_samples.extend(patient_to_images[pid])
 
     return train_samples, val_samples
+
+
+def _load_test_samples(test_dir=DATA_TEST_PATH):
+    """
+    Loads all test samples from test directory.
+    
+    Returns:
+        list: List of (image_path, label) tuples.
+    """
+    test_samples = []
+    classes = [("NC", 0), ("AD", 1)]
+
+    for class_name, label in classes:
+        class_dir = os.path.join(test_dir, class_name)
+        if not os.path.exists(class_dir):
+            continue
+
+        for fname in os.listdir(class_dir):
+            if fname.lower().endswith((".jpeg", ".jpg")):
+                img_path = os.path.join(class_dir, fname)
+                test_samples.append((img_path, label))
+
+    return test_samples
