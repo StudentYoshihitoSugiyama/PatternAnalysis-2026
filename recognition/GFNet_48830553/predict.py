@@ -1,6 +1,10 @@
 import torch
 import time
-from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatrix
+import argparse
+from modules import load_checkpoint, get_device
+from dataset import data_loaders
+from train import PATH_BEST_MODEL, PATH_LATEST_MODEL
+from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatrix, BinaryAccuracy
 
 
 def fast_evaluate_model(model, test_loader, device):
@@ -10,21 +14,21 @@ def fast_evaluate_model(model, test_loader, device):
         for batch_X, batch_y in test_loader:
             batch_X, batch_y = batch_X.to(device), batch_y.to(device)
             outputs = model(batch_X)
-            _, preds = torch.max(outputs, 1)
+            _, _ = torch.max(outputs, 1)
     end_time = time.time()
     total_time = end_time - start_time
     return total_time
 
-def evaluate_model(model,test_loader, criterion, device):
+def evaluate_model(model, test_loader, device):
     """
     Evaluates the model on the test dataset
     """
-    precision_metric = BinaryPrecision(num_classes=2, average="macro")
-    recall_metric = BinaryRecall(num_classes=2, average="macro")
-    confusion_matrix_metric = BinaryConfusionMatrix(num_classes=2)
+    precision_metric = BinaryPrecision(average="macro", device=device)
+    recall_metric = BinaryRecall(average="macro", device=device)
+    confusion_matrix_metric = BinaryConfusionMatrix(device=device)
+    accuracy_metric = BinaryAccuracy(device=device)
 
     model.eval()
-    test_loss = 0.0
     test_correct = 0
     test_total = 0
     acc_tp_conf = 0.0
@@ -37,14 +41,13 @@ def evaluate_model(model,test_loader, criterion, device):
         for batch_X, batch_y in test_loader:
             batch_X, batch_y = batch_X.to(device), batch_y.to(device)
             outputs = model(batch_X)
-            loss = criterion(outputs, batch_y)
 
-            test_loss += loss.item() * batch_X.size(0)
             _, preds = torch.max(outputs, 1)
 
-            precision_metric.update(preds, batch_y.to(device))
-            recall_metric.update(preds, batch_y.to(device))
-            confusion_matrix_metric.update(preds, batch_y.to(device))
+            precision_metric.update(preds, batch_y)
+            recall_metric.update(preds, batch_y)
+            confusion_matrix_metric.update(preds, batch_y)
+            accuracy_metric.update(preds, batch_y)
 
             probs = torch.softmax(outputs, dim=1)
             # Get the probability assigned to the positive class (class 1)
@@ -81,7 +84,9 @@ def evaluate_model(model,test_loader, criterion, device):
     precision = precision_metric.compute()
     recall = recall_metric.compute()
     conf_matrix = confusion_matrix_metric.compute()
+    test_accuracy = accuracy_metric.compute()
     total_time = fast_evaluate_model(model=model, test_loader=test_loader, device=device)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model testing")
     parser.add_argument("--model", default="RN18", choices=["RN18", "GFNET"], help="Model to test: 'RN18' or 'GFNET'")
