@@ -9,7 +9,7 @@ DATA_TRAIN_PATH = "/home/groups/comp3710/ADNI/AD_NC/train/"
 
 # Hyperparameters and Configuration
 IMAGE_SIZE = 256
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 NUM_WORKERS = 1
 SPLIT_RATIO = 0.8
 SEED = 42
