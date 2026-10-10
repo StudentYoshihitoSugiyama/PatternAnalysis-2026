@@ -70,8 +70,6 @@ def save_checkpoint(path, model, hyperparameters, accuracy, loss, total_training
     checkpoint = {
         "model_state_dict": model.state_dict(),
         "hyperparameters": hyperparameters,
-        "test_accuracy": accuracy,
-        "test_loss": loss,
         "train_time": total_training_time
     }
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
