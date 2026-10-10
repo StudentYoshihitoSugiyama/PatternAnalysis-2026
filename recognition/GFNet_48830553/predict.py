@@ -1,7 +1,9 @@
 import torch
 import copy
 import os
-
+import time
+from modules import ResNet18, GFNet, criterion
+from dataset import data_loaders
 
 # Global variable definitions for file paths
 PATH_LATEST_MODEL = "Models/latest"
@@ -9,7 +11,6 @@ PATH_BEST_MODEL = "Models/best"
 
 # Hyperparameters
 EPOCHS = 5
-BATCH_SIZE = 128
 PATIENCE = 10
 ETA_MIN = 1e-5
 
