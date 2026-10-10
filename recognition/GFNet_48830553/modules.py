@@ -43,7 +43,7 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
         return out
 
-class ResNet18(nn.module):
+class ResNet18(nn.Module):
     """
     ResNet-18 Model tailored for ADNI dataset (256x256 images).
     
