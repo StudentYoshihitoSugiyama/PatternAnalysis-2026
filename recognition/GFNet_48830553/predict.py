@@ -80,12 +80,27 @@ def evaluate_model(model, test_loader, device):
     total_avg_tn_conf = acc_tn_conf/ batch_count
     total_avg_fp_conf = acc_fp_conf / batch_count
     total_avg_fn_conf = acc_fn_conf / batch_count
+    total_true_conf = torch.mean((total_avg_tp_conf, total_avg_tn_conf))
+    total_false_conf = torch.mean((total_avg_fp_conf, total_avg_fn_conf))
 
     precision = precision_metric.compute()
     recall = recall_metric.compute()
     conf_matrix = confusion_matrix_metric.compute()
     test_accuracy = accuracy_metric.compute()
     total_time = fast_evaluate_model(model=model, test_loader=test_loader, device=device)
+
+    print(f"True positive confidence: {total_avg_tp_conf:.2f}")
+    print(f"True negative confidence: {total_avg_tn_conf:.2f}")
+    print(f"False positive confidence: {total_avg_fp_conf:.2f}")
+    print(f"False negative confidence: {total_avg_fn_conf:.2f}")
+    print(f"True confidence: {total_true_conf:.2f}")
+    print(f"False confidence: {total_false_conf:.2f}")
+    print(f"Precision: {precision:.2f}")
+    print(f"Recall: {recall:.2f}")
+    print(f"Test Accuracy: {test_accuracy:.2f}")
+    print(f"Inference time: {total_time:.2f}")
+    print(f"Confusion Matrix: {conf_matrix}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model testing")
