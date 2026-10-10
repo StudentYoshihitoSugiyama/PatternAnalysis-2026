@@ -83,14 +83,15 @@ def train(
     criterion,
     optimizer,
     scheduler,
-    device
+    device, 
+    train_loader, 
+    val_loader
 ):
     """
     Trains the provided model on the ADNI dataset
     """
     print(f"\nBeginning training on device '{device}' for {EPOCHS} epochs...")
 
-    train_loader, val_loader, _ = data_loaders()
     early_stopping = EarlyStopping()
 
     if torch.cuda.is_available():
@@ -179,7 +180,11 @@ if __name__ == "__main__":
         model = ResNet18()
     else:
         model = GFNet()
-    
+
+    latest_path = PATH_LATEST_MODEL + "_" + str(mode)
+    best_path = PATH_BEST_MODEL + "_" + str(mode)
+    train_loader, val_loader, test_loader = data_loaders()
     optimiser = optim.AdamW(params=model.parameters(), lr=LR, weight_decay=WD)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=EPOCHS, eta_min=ETA_MIN)
-    train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler, device=get_device())
+    train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
+            device=get_device(), train_loader=train_loader, val_loader=val_loader)
