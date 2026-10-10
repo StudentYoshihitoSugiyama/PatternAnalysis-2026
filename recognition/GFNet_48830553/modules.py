@@ -12,6 +12,9 @@ DEPTH = 6             # Number of GFNet Transformer blocks
 MLP_RATIO = 4.0       # MLP expansion ratio
 NUM_CLASSES = 2       # NC (0) vs AD (1)
 DROPOUT_RATE = 0.1    # Dropout probability
+WEIGHT = None
+LABEL_SMOOTHING = 0.0
+
 
 
 class BasicBlock(nn.Module):
@@ -251,3 +254,9 @@ class GFNet(nn.Module):
         logits = self.head(x)
         return logits
 
+
+def criterion():
+    """
+    Returns the standard CrossEntropyLoss for ADNI classification.
+    """
+    return nn.CrossEntropyLoss(weight=WEIGHT, label_smoothing=LABEL_SMOOTHING)
