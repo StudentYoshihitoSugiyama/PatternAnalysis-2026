@@ -4,7 +4,7 @@ import os
 import time
 import argparse
 import torch.optim as optim
-from modules import ResNet18, GFNet, criterion, load_checkpoint, get_device, WEIGHT, LABEL_SMOOTHING
+from modules import ResNet18, GFNet, get_criterion, load_checkpoint, get_device, WEIGHT, LABEL_SMOOTHING
 from dataset import data_loaders
 
 # Global variable definitions for file paths
