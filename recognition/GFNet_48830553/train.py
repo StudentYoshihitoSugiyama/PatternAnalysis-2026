@@ -198,17 +198,27 @@ if __name__ == "__main__":
     args = parser.parse_args()
     mode = args.model
 
+    print("Selecting Model...")
     if mode == "RN18":
         model = ResNet18()
     else:
         model = GFNet()
 
+    print("Constructing paths...")
     latest_path = PATH_LATEST_MODEL + "_" + str(mode)
     best_path = PATH_BEST_MODEL + "_" + str(mode)
+
+    print("Constructing data loaders...")
     train_loader, val_loader, test_loader = data_loaders()
+
+    print("Constructing optimiser, scheduler, and criterion...")
     optimiser = optim.AdamW(params=model.parameters(), lr=LR, weight_decay=WD)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=EPOCHS, eta_min=ETA_MIN)
+    criterion = get_criterion()
+
+    print("Obtaining device...")
     device = get_device()
+    
     train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
             device=device, train_loader=train_loader, val_loader=val_loader)
     current_model_accuracy = evaluate_model(model=model, criterion=criterion, device=device)
