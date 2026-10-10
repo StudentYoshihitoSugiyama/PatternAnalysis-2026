@@ -88,4 +88,31 @@ class ResNet18(nn.module):
         out = torch.flatten(out, 1)
         out = self.dropout(out)
         out = self.fc(out)
-        return out 
+        return out
+
+
+class PatchEmbed(nn.Module):
+    """
+    Splits 2D image into patches and linearly projects them into embedding dimension.
+    """
+    def __init__(self, img_size=IMG_SIZE, patch_size=PATCH_SIZE, in_chans=IN_CHANS, embed_dim=EMBED_DIM):
+        super(PatchEmbed, self).__init__()
+        self.img_size = (img_size, img_size) if isinstance(img_size, int) else img_size
+        self.patch_size = (patch_size, patch_size) if isinstance(patch_size, int) else patch_size
+        self.grid_size = (self.img_size[0] // self.patch_size[0], self.img_size[1] // self.patch_size[1])
+        self.num_patches = self.grid_size[0] * self.grid_size[1]
+
+        self.proj = nn.Conv2d(
+            in_chans,
+            embed_dim,
+            kernel_size=self.patch_size,
+            stride=self.patch_size
+        )
+
+    def forward(self, x):
+        # x: (B, C, H, W) -> (B, D, H_grid, W_grid) -> (B, H_grid, W_grid, D)
+        x = self.proj(x)
+        x = x.permute(0, 2, 3, 1)
+        return x
+
+
