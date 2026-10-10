@@ -1,15 +1,16 @@
 import torch
 import time
-from torcheval.metrics import MulticlassPrecision, MulticlassRecall, MulticlassConfusionMatrix
+from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatrix
+
 
 
 def evaluate_model(model,test_loader, criterion, device):
     """
     Evaluates the model on the test dataset
     """
-    precision_metric = MulticlassPrecision(num_classes=2, average="macro")
-    recall_metric = MulticlassRecall(num_classes=2, average="macro")
-    confusion_matrix_metric = MulticlassConfusionMatrix(num_classes=2)
+    precision_metric = BinaryPrecision(num_classes=2, average="macro")
+    recall_metric = BinaryRecall(num_classes=2, average="macro")
+    confusion_matrix_metric = BinaryConfusionMatrix(num_classes=2)
 
     model.eval()
     test_loss = 0.0
