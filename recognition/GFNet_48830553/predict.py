@@ -82,5 +82,36 @@ def evaluate_model(model,test_loader, criterion, device):
     recall = recall_metric.compute()
     conf_matrix = confusion_matrix_metric.compute()
     total_time = fast_evaluate_model(model=model, test_loader=test_loader, device=device)
-    test_accuracy = test_correct / test_total
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model testing")
+    parser.add_argument("--model", default="RN18", choices=["RN18", "GFNET"], help="Model to test: 'RN18' or 'GFNET'")
+    parser.add_argument("--version", default="BEST", choices=["BEST", "LATEST"], help="Version to test: 'BEST' or 'LATEST'")
+    args = parser.parse_args()
+    model_version = args.model
+    version = args.version
 
+    print("Obtaining device...")
+    device = get_device()
+
+    print("Obtaining model path...")
+    if version == "BEST" and model_version == "RN18":
+        path = PATH_BEST_MODEL + "_" + model_version
+    elif version == "LATEST" and model_version == "RN18":
+        path = PATH_LATEST_MODEL + "_" + model_version
+    elif version == "BEST" and model_version == "GFNET":
+        path = PATH_BEST_MODEL + "_" + model_version
+    else:
+        path = PATH_LATEST_MODEL + "_" + model_version
+
+    print("Loading model...")
+    model = load_checkpoint(path, device=device)
+    if model == None:
+        print("Model is None")
+        raise ValueError
+    model.to(device=device)
+
+    print("Constructing data loaders...")
+    _, _, test_loader = data_loaders()
+
+    print("Begin testing...")
+    evaluate_model(model=model, test_loader=test_loader, device=device)
