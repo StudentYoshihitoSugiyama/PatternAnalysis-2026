@@ -63,7 +63,7 @@ class EarlyStopping:
             if self.verbose:
                 print(f"Restored best model weights from epoch {self.best_epoch} (Val Loss: {self.best_loss:.4f}).")
 
-def save_checkpoint(path, model, hyperparameters, accuracy, loss, total_training_time):
+def save_checkpoint(path, model, hyperparameters, total_training_time):
     """
     Saves model state dictionary and hyperparameter dictionary locally.
     """
