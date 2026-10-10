@@ -1,5 +1,6 @@
 import torch
 import copy
+import os
 
 
 def get_device():
@@ -50,3 +51,37 @@ class EarlyStopping:
             model.load_state_dict(self.best_weights)
             if self.verbose:
                 print(f"Restored best model weights from epoch {self.best_epoch} (Val Loss: {self.best_loss:.4f}).")
+
+def save_checkpoint(path, model, hyperparameters, accuracy, loss, total_training_time):
+    """
+    Saves model state dictionary and hyperparameter dictionary locally.
+    """
+    checkpoint = {
+        "model_state_dict": model.state_dict(),
+        "hyperparameters": hyperparameters,
+        "test_accuracy": accuracy,
+        "test_loss": loss,
+        "train_time": total_training_time
+    }
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    torch.save(checkpoint, path)
+    print(f"Successfully saved checkpoint to '{path}'.")
+
+
+def load_checkpoint(path, device):
+    """
+    Loads checkpoint if file exists in path or in script directory.
+    """
+    target_path = path
+    if not os.path.exists(target_path):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        alt_path = os.path.join(script_dir, path)
+        if os.path.exists(alt_path):
+            target_path = alt_path
+        else:
+            return None
+    try:
+        return torch.load(target_path, map_location=device)
+    except Exception as e:
+        print(f"Warning: Could not load checkpoint from '{target_path}': {e}")
+        return None
