@@ -222,24 +222,25 @@ if __name__ == "__main__":
     device = get_device()
     model.to(device=device)
     
-    train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
+    trained_model, training_time = train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
             device=device, train_loader=train_loader, val_loader=val_loader)
     current_model_accuracy = evaluate_model(model=model, test_loader=test_loader, criterion=criterion, device=device)
     
     information = consolidate_information(
-        model=model, test_accuracy=current_model_accuracy, 
+        model=trained_model, test_accuracy=current_model_accuracy, 
         criterion=criterion, optimiser=optimiser,
-        scheduler=scheduler, device=device)
+        scheduler=scheduler, device=device, training_time=training_time)
     
-    save_checkpoint(path=latest_path, model=model, information=information)
+    save_checkpoint(path=latest_path, model=trained_model, information=information)
     best_model = load_checkpoint(best_path, device=device)
 
     if best_model == None:
+        print(f"Current model ({current_model_accuracy:.4f}%)")
         print("No best model found. Automatically saving as best.")
-        save_checkpoint(path=best_path, model=model, information=information)
+        save_checkpoint(path=best_path, model=trained_model, information=information)
     elif best_model.get("test_accuracy", -1.0) < current_model_accuracy:
         print(f"Current model ({current_model_accuracy:.4f}%) did beat best model ({best_model:.4f}%).")
-        save_checkpoint(path=best_path, model=model, information=information)
+        save_checkpoint(path=best_path, model=trained_model, information=information)
     else:
         print(f"Current model ({current_model_accuracy:.4f}%) did not beat best model ({best_model:.4f}%).")
 
