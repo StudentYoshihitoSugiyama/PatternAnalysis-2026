@@ -5,8 +5,17 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
-DATA_TEST_PATH = "/home/groups/comp3710/ADNI/test/"
-DATA_TRAIN_PATH = "/home/groups/comp3710/ADNI/train/"
+DATA_TEST_PATH = "/home/groups/comp3710/ADNI/AD_NC/test/"
+DATA_TRAIN_PATH = "/home/groups/comp3710/ADNI/AD_NC/train/"
+
+# Hyperparameters and Configuration
+IMAGE_SIZE = 256
+BATCH_SIZE = 32
+NUM_WORKERS = 2
+SPLIT_RATIO = 0.8
+SEED = 42
+NORM_MEAN = [0.5]
+NORM_STD = [0.5]
 
 
 class ADNIDataset(Dataset):
@@ -21,7 +30,7 @@ class ADNIDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path, label = self.samples[idx]
-        image = Image.open(img_path).convert("RGB")
+        image = Image.open(img_path).convert("L")
 
         if self.transform:
             image = self.transform(image)
@@ -37,13 +46,15 @@ def data_preprocess():
         tuple: (train_transform, eval_transform)
     """
     train_transform = transforms.Compose([
+        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=NORM_MEAN, std=NORM_STD)
     ])
 
     eval_transform = transforms.Compose([
+        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=NORM_MEAN, std=NORM_STD)
     ])
 
     return train_transform, eval_transform
@@ -124,7 +135,7 @@ def _load_test_samples(test_dir=DATA_TEST_PATH):
     return test_samples
 
 
-def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=32, num_workers=2, split_ratio=0.8, seed=42):
+def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, split_ratio=SPLIT_RATIO, seed=SEED):
     """
     Creates and returns PyTorch DataLoaders for training, validation, and testing.
 
