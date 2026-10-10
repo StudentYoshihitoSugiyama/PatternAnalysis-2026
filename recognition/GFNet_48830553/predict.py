@@ -2,6 +2,7 @@ import torch
 import copy
 import os
 import time
+import argparse
 from modules import ResNet18, GFNet, criterion
 from dataset import data_loaders
 
@@ -186,3 +187,14 @@ def train_and_validate(
     print("Training finished.")
     print(f"Total Training Time: {total_training_time:.2f} seconds ({total_training_time / 60:.2f} minutes)")
     return model, total_training_time
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model training")
+    parser.add_argument("--model", default="RN18", choices=["RN18", "GFNET"], help="Model to train: 'RN18' or 'GFNET'")
+    args = parser.parse_args()
+    mode = args.mode
+
+    if mode == "RN18":
+        pass
+    else:
+        pass
