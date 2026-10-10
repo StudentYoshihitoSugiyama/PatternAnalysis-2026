@@ -3,6 +3,16 @@ import copy
 import os
 
 
+# Global variable definitions for file paths
+PATH_LATEST_MODEL = "Models/latest"
+PATH_BEST_MODEL = "Models/best"
+
+# Hyperparameters
+EPOCHS = 5
+BATCH_SIZE = 128
+PATIENCE = 10
+ETA_MIN = 1e-5
+
 def get_device():
     """
     Selects the optimal hardware device available.
