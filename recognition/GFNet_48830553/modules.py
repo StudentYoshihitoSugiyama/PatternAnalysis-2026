@@ -1,5 +1,17 @@
-import torch.nn as nn
 import torch
+import torch.nn as nn
+
+# ==========================================
+# GFNet Hyperparameters (Global Configuration)
+# ==========================================
+IMG_SIZE = 256
+IN_CHANS = 1          # Greyscale images
+PATCH_SIZE = 16       # Spatial patch size: 256 / 16 = 16 patches per axis
+EMBED_DIM = 256       # Hidden embedding dimension
+DEPTH = 6             # Number of GFNet Transformer blocks
+MLP_RATIO = 4.0       # MLP expansion ratio
+NUM_CLASSES = 2       # NC (0) vs AD (1)
+DROPOUT_RATE = 0.1    # Dropout probability
 
 
 class BasicBlock(nn.Module):
