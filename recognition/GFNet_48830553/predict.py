@@ -3,6 +3,7 @@ import copy
 import os
 import time
 import argparse
+import torch.optim as optim
 from modules import ResNet18, GFNet, criterion
 from dataset import data_loaders
 
@@ -14,6 +15,8 @@ PATH_BEST_MODEL = "Models/best"
 EPOCHS = 5
 PATIENCE = 10
 ETA_MIN = 1e-5
+LR = 0.001
+WD = 0.01
 
 def get_device():
     """
@@ -97,7 +100,7 @@ def load_checkpoint(path, device):
         return None
 
 
-def train_and_validate(
+def train(
     model,
     criterion,
     optimizer,
@@ -195,6 +198,10 @@ if __name__ == "__main__":
     mode = args.mode
 
     if mode == "RN18":
-        pass
+        model = ResNet18()
     else:
-        pass
+        model = GFNet()
+    
+    optimiser = optim.AdamW(params=model.parameters(), lr=LR, weight_decay=WD)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=EPOCHS, eta_min=ETA_MIN)
+    train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler, device=get_device())
