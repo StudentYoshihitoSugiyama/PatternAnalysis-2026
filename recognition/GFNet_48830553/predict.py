@@ -4,7 +4,7 @@ import os
 import time
 import argparse
 import torch.optim as optim
-from modules import ResNet18, GFNet, criterion
+from modules import ResNet18, GFNet, criterion, load_checkpoint
 from dataset import data_loaders
 
 # Global variable definitions for file paths
@@ -28,8 +28,6 @@ def get_device():
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
-
-
 
 class EarlyStopping:
     """
@@ -79,26 +77,6 @@ def save_checkpoint(path, model, hyperparameters, total_training_time):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     torch.save(checkpoint, path)
     print(f"Successfully saved checkpoint to '{path}'.")
-
-
-def load_checkpoint(path, device):
-    """
-    Loads checkpoint if file exists in path or in script directory.
-    """
-    target_path = path
-    if not os.path.exists(target_path):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        alt_path = os.path.join(script_dir, path)
-        if os.path.exists(alt_path):
-            target_path = alt_path
-        else:
-            return None
-    try:
-        return torch.load(target_path, map_location=device)
-    except Exception as e:
-        print(f"Warning: Could not load checkpoint from '{target_path}': {e}")
-        return None
-
 
 def train(
     model,

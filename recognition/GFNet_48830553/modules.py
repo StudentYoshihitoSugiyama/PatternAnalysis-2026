@@ -260,3 +260,21 @@ def criterion():
     Returns the standard CrossEntropyLoss for ADNI classification.
     """
     return nn.CrossEntropyLoss(weight=WEIGHT, label_smoothing=LABEL_SMOOTHING)
+
+def load_checkpoint(path, device):
+    """
+    Loads checkpoint if file exists in path or in script directory.
+    """
+    target_path = path
+    if not os.path.exists(target_path):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        alt_path = os.path.join(script_dir, path)
+        if os.path.exists(alt_path):
+            target_path = alt_path
+        else:
+            return None
+    try:
+        return torch.load(target_path, map_location=device)
+    except Exception as e:
+        print(f"Warning: Could not load checkpoint from '{target_path}': {e}")
+        return None
