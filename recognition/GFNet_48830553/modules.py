@@ -256,7 +256,7 @@ class GFNet(nn.Module):
         return logits
 
 
-def criterion():
+def get_criterion():
     """
     Returns the standard CrossEntropyLoss for ADNI classification.
     """
