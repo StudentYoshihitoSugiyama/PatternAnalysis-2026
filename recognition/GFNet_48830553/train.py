@@ -184,9 +184,10 @@ def evaluate_model(model, test_loader, criterion, device):
 def consolidate_information(model, test_accuracy, criterion, optimiser, scheduler, device, training_time):
     information = {
         "model": str(model),
+        "epochs": EPOCHS,
         "criterion": f"Cross-Entropy: (weight: {WEIGHT}), (label smoothing: {LABEL_SMOOTHING})",
         "optimiser": "ADAMW: " + str(optimiser.state_dict()["param_groups"]),
-        "test_accuracy": str(test_accuracy),
+        "test_accuracy": test_accuracy,
         "scheduler": f"Cosine Annealing LR: (T_MAX: {EPOCHS}), (eta_min: {ETA_MIN})",
         "device": str(device),
         "training_time": training_time
