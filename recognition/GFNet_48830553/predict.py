@@ -4,7 +4,7 @@ import os
 import time
 import argparse
 import torch.optim as optim
-from modules import ResNet18, GFNet, criterion, load_checkpoint
+from modules import ResNet18, GFNet, criterion, load_checkpoint, get_device, WEIGHT, LABEL_SMOOTHING
 from dataset import data_loaders
 
 # Global variable definitions for file paths
@@ -54,14 +54,13 @@ class EarlyStopping:
             if self.verbose:
                 print(f"Restored best model weights from epoch {self.best_epoch} (Val Loss: {self.best_loss:.4f}).")
 
-def save_checkpoint(path, model, hyperparameters, total_training_time):
+def save_checkpoint(path, model, information):
     """
     Saves model state dictionary and hyperparameter dictionary locally.
     """
     checkpoint = {
         "model_state_dict": model.state_dict(),
-        "hyperparameters": hyperparameters,
-        "train_time": total_training_time
+        "information": information,
     }
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     torch.save(checkpoint, path)
@@ -182,6 +181,17 @@ def evaluate_model(model,test_loader, criterion, device):
     test_accuracy = test_correct / test_total
     return test_accuracy
 
+def consolidate_information(model, test_accuracy, criterion, optimiser, scheduler, device):
+    information = {
+        "model": str(model),
+        "criterion": f"Cross-Entropy: (weight: {WEIGHT}), (label smoothing: {LABEL_SMOOTHING})",
+        "optimiser": "ADAMW: " + str(optimiser.state_dict()["param_groups"]),
+        "test_accuracy": str(test_accuracy),
+        "scheduler": f"Cosine Annealing LR: (T_MAX: {EPOCHS}), (eta_min: {ETA_MIN})",
+        "device": str(device)
+    }
+    return information
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model training")
     parser.add_argument("--model", default="RN18", choices=["RN18", "GFNET"], help="Model to train: 'RN18' or 'GFNET'")
@@ -202,14 +212,21 @@ if __name__ == "__main__":
     train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
             device=device, train_loader=train_loader, val_loader=val_loader)
     current_model_accuracy = evaluate_model(model=model, criterion=criterion, device=device)
-    save_checkpoint(path=latest_path, model=model, hyperparameters=None)
-    best_model_accuracy = load_checkpoint(best_path, device=device)
-    if best_model_accuracy == None:
+    
+    information = consolidate_information(
+        model=model, test_accuracy=current_model_accuracy, 
+        criterion=criterion, optimiser=optimiser,
+        scheduler=scheduler, device=device)
+    
+    save_checkpoint(path=latest_path, model=model, information=information)
+    best_model = load_checkpoint(best_path, device=device)
+
+    if best_model == None:
         print("No best model found. Automatically saving as best.")
-        save_checkpoint(path=best_path, model=model, hyperparameters=None)
-    elif best_model_accuracy < current_model_accuracy:
-        print(f"Current model ({current_model_accuracy:.4f}%) did beat best model ({best_model_accuracy}%).")
-        save_checkpoint(path=best_path, model=model, hyperparameters=None)
+        save_checkpoint(path=best_path, model=model, information=information)
+    elif best_model.get("test_accuracy", -1.0) < current_model_accuracy:
+        print(f"Current model ({current_model_accuracy:.4f}%) did beat best model ({best_model:.4f}%).")
+        save_checkpoint(path=best_path, model=model, information=information)
     else:
-        print(f"Current model ({current_model_accuracy:.4f}%) did not beat best model ({best_model_accuracy}%).")
+        print(f"Current model ({current_model_accuracy:.4f}%) did not beat best model ({best_model:.4f}%).")
 
