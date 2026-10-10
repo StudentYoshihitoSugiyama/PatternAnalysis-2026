@@ -147,3 +147,26 @@ class GlobalFilter(nn.Module):
         return x
 
 
+class Mlp(nn.Module):
+    """
+    Standard Feed-Forward Network (MLP) used in Transformer blocks.
+    """
+    def __init__(self, in_features=EMBED_DIM, hidden_features=None, out_features=None, drop=DROPOUT_RATE):
+        super(Mlp, self).__init__()
+        out_features = out_features or in_features
+        hidden_features = hidden_features or int(in_features * MLP_RATIO)
+
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.act = nn.GELU()
+        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.drop(x)
+        x = self.fc2(x)
+        x = self.drop(x)
+        return x
+
+
