@@ -116,3 +116,34 @@ class PatchEmbed(nn.Module):
         return x
 
 
+class GlobalFilter(nn.Module):
+    """
+    Global Filter layer performing 2D FFT, element-wise multiplication with learnable
+    complex frequency weights, and 2D inverse FFT.
+    """
+    def __init__(self, dim=EMBED_DIM, h=IMG_SIZE // PATCH_SIZE, w=IMG_SIZE // PATCH_SIZE):
+        super(GlobalFilter, self).__init__()
+        self.h = h
+        self.w = w
+        # Real FFT along width dimension produces w // 2 + 1 non-redundant frequencies
+        self.complex_weight = nn.Parameter(
+            torch.randn(h, w // 2 + 1, dim, 2, dtype=torch.float32) * 0.02
+        )
+
+    def forward(self, x):
+        B, H, W, C = x.shape
+        # Convert to float32 for FFT calculation
+        x = x.to(torch.float32)
+
+        # 2D Real FFT along spatial axes (H, W)
+        x_fft = torch.fft.rfft2(x, dim=(1, 2), norm='ortho')
+
+        # Form complex weights from the 2 real channels
+        weight = torch.view_as_complex(self.complex_weight)
+        x_fft = x_fft * weight
+
+        # Inverse 2D Real FFT back to spatial domain
+        x = torch.fft.irfft2(x_fft, s=(H, W), dim=(1, 2), norm='ortho')
+        return x
+
+
