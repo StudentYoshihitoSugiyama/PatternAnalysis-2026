@@ -170,6 +170,30 @@ def train(
     print(f"Total Training Time: {total_training_time:.2f} seconds ({total_training_time / 60:.2f} minutes)")
     return model, total_training_time
 
+def evaluate_model(model,test_loader, criterion, device):
+    """
+    Evaluates the model on the test dataset
+    """
+    model.eval()
+    test_loss = 0.0
+    test_correct = 0
+    test_total = 0
+
+    with torch.no_grad():
+        for batch_X, batch_y in test_loader:
+            batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+            outputs = model(batch_X)
+            loss = criterion(outputs, batch_y)
+
+            test_loss += loss.item() * batch_X.size(0)
+            _, preds = torch.max(outputs, 1)
+            test_correct += (preds == batch_y).sum().item()
+            test_total += batch_y.size(0)
+
+    avg_test_loss = test_loss / test_total
+    test_accuracy = test_correct / test_total
+    return test_accuracy, avg_test_loss
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model training")
     parser.add_argument("--model", default="RN18", choices=["RN18", "GFNET"], help="Model to train: 'RN18' or 'GFNET'")
