@@ -3,7 +3,7 @@
 #SBATCH --partition=comp3710
 #SBATCH --account=comp3710
 #SBATCH --gres=gpu
-#SBATCH --time=10:00:00
+#SBATCH --time=01:00:00
 #SBATCH --output=Outputs/Train_GFNET.out
 #SBATCH --error=Errors/Train_GFNET.err
 
