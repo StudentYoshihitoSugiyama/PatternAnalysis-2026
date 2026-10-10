@@ -218,6 +218,7 @@ if __name__ == "__main__":
 
     print("Obtaining device...")
     device = get_device()
+    model.to(device=device)
     
     train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
             device=device, train_loader=train_loader, val_loader=val_loader)
