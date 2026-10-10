@@ -170,3 +170,84 @@ class Mlp(nn.Module):
         return x
 
 
+class GFNetBlock(nn.Module):
+    """
+    GFNet Transformer Block: LayerNorm -> GlobalFilter -> LayerNorm -> Mlp with residual connections.
+    """
+    def __init__(self, dim=EMBED_DIM, h=IMG_SIZE // PATCH_SIZE, w=IMG_SIZE // PATCH_SIZE,
+                 mlp_ratio=MLP_RATIO, drop=DROPOUT_RATE):
+        super(GFNetBlock, self).__init__()
+        self.norm1 = nn.LayerNorm(dim)
+        self.filter = GlobalFilter(dim=dim, h=h, w=w)
+        self.norm2 = nn.LayerNorm(dim)
+        self.mlp = Mlp(in_features=dim, hidden_features=int(dim * mlp_ratio), drop=drop)
+
+    def forward(self, x):
+        # Global filter sub-layer with residual connection
+        x = x + self.filter(self.norm1(x))
+        # MLP sub-layer with residual connection
+        x = x + self.mlp(self.norm2(x))
+        return x
+
+
+class GFNet(nn.Module):
+    """
+    Global Filter Network (GFNet) tailored for 256x256 greyscale ADNI images.
+    """
+    def __init__(self, img_size=IMG_SIZE, patch_size=PATCH_SIZE, in_chans=IN_CHANS,
+                 num_classes=NUM_CLASSES, embed_dim=EMBED_DIM, depth=DEPTH,
+                 mlp_ratio=MLP_RATIO, drop_rate=DROPOUT_RATE):
+        super(GFNet, self).__init__()
+        self.num_classes = num_classes
+        self.embed_dim = embed_dim
+
+        self.patch_embed = PatchEmbed(
+            img_size=img_size,
+            patch_size=patch_size,
+            in_chans=in_chans,
+            embed_dim=embed_dim
+        )
+        h, w = self.patch_embed.grid_size
+
+        # Learnable 2D positional embeddings
+        self.pos_embed = nn.Parameter(torch.zeros(1, h, w, embed_dim))
+        self.pos_drop = nn.Dropout(p=drop_rate)
+
+        # Transformer blocks with global Fourier filters
+        self.blocks = nn.ModuleList([
+            GFNetBlock(dim=embed_dim, h=h, w=w, mlp_ratio=mlp_ratio, drop=drop_rate)
+            for _ in range(depth)
+        ])
+
+        self.norm = nn.LayerNorm(embed_dim)
+        self.head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
+
+        # Initialize positional embeddings
+        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.trunc_normal_(m.weight, std=0.02)
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
+    def forward(self, x):
+        # Patch embedding: (B, C, 256, 256) -> (B, H_grid, W_grid, D)
+        x = self.patch_embed(x)
+        x = x + self.pos_embed
+        x = self.pos_drop(x)
+
+        # Global filter blocks
+        for block in self.blocks:
+            x = block(x)
+
+        x = self.norm(x)
+        # Global average pooling over spatial grid dimensions (H_grid, W_grid)
+        x = x.mean(dim=(1, 2))
+        logits = self.head(x)
+        return logits
+
