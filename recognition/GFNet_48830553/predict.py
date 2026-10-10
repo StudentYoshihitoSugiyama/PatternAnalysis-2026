@@ -3,6 +3,17 @@ import time
 from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatrix
 
 
+def fast_evaluate_model(model, test_loader, device):
+    model.eval()
+    start_time = time.time()
+    with torch.no_grad():
+        for batch_X, batch_y in test_loader:
+            batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+            outputs = model(batch_X)
+            _, preds = torch.max(outputs, 1)
+    end_time = time.time()
+    total_time = end_time - start_time
+    return total_time
 
 def evaluate_model(model,test_loader, criterion, device):
     """
@@ -38,6 +49,6 @@ def evaluate_model(model,test_loader, criterion, device):
     precision = precision_metric.compute()
     recall = recall_metric.compute()
     conf_matrix = confusion_matrix_metric.compute()
-    total_time = end_time - start_time
+    total_time = fast_evaluate_model(model=model, test_loader=test_loader, device=device)
     test_accuracy = test_correct / test_total
 
