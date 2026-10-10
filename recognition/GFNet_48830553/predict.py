@@ -190,9 +190,8 @@ def evaluate_model(model,test_loader, criterion, device):
             test_correct += (preds == batch_y).sum().item()
             test_total += batch_y.size(0)
 
-    avg_test_loss = test_loss / test_total
     test_accuracy = test_correct / test_total
-    return test_accuracy, avg_test_loss
+    return test_accuracy
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model training")
@@ -210,5 +209,18 @@ if __name__ == "__main__":
     train_loader, val_loader, test_loader = data_loaders()
     optimiser = optim.AdamW(params=model.parameters(), lr=LR, weight_decay=WD)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=EPOCHS, eta_min=ETA_MIN)
+    device = get_device()
     train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
-            device=get_device(), train_loader=train_loader, val_loader=val_loader)
+            device=device, train_loader=train_loader, val_loader=val_loader)
+    current_model_accuracy = evaluate_model(model=model, criterion=criterion, device=device)
+    save_checkpoint(path=latest_path, model=model, hyperparameters=None)
+    best_model_accuracy = load_checkpoint(best_path, device=device)
+    if best_model_accuracy == None:
+        print("No best model found. Automatically saving as best.")
+        save_checkpoint(path=best_path, model=model, hyperparameters=None)
+    elif best_model_accuracy < current_model_accuracy:
+        print(f"Current model ({current_model_accuracy:.4f}%) did beat best model ({best_model_accuracy}%).")
+        save_checkpoint(path=best_path, model=model, hyperparameters=None)
+    else:
+        print(f"Current model ({current_model_accuracy:.4f}%) did not beat best model ({best_model_accuracy}%).")
+
