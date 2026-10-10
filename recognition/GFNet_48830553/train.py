@@ -158,7 +158,7 @@ def train(
     print(f"Total Training Time: {total_training_time:.2f} seconds ({total_training_time / 60:.2f} minutes)")
     return model, total_training_time
 
-def evaluate_model(model,test_loader, criterion, device):
+def evaluate_model(model, test_loader, criterion, device):
     """
     Evaluates the model on the test dataset
     """
@@ -222,7 +222,7 @@ if __name__ == "__main__":
     
     train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
             device=device, train_loader=train_loader, val_loader=val_loader)
-    current_model_accuracy = evaluate_model(model=model, criterion=criterion, device=device)
+    current_model_accuracy = evaluate_model(model=model, test_loader=test_loader, criterion=criterion, device=device)
     
     information = consolidate_information(
         model=model, test_accuracy=current_model_accuracy, 
