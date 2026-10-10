@@ -181,14 +181,15 @@ def evaluate_model(model, test_loader, criterion, device):
     test_accuracy = test_correct / test_total
     return test_accuracy
 
-def consolidate_information(model, test_accuracy, criterion, optimiser, scheduler, device):
+def consolidate_information(model, test_accuracy, criterion, optimiser, scheduler, device, training_time):
     information = {
         "model": str(model),
         "criterion": f"Cross-Entropy: (weight: {WEIGHT}), (label smoothing: {LABEL_SMOOTHING})",
         "optimiser": "ADAMW: " + str(optimiser.state_dict()["param_groups"]),
         "test_accuracy": str(test_accuracy),
         "scheduler": f"Cosine Annealing LR: (T_MAX: {EPOCHS}), (eta_min: {ETA_MIN})",
-        "device": str(device)
+        "device": str(device),
+        "training_time": training_time
     }
     return information
     
