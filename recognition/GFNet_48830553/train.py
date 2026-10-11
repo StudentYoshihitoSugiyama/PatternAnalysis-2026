@@ -240,8 +240,8 @@ if __name__ == "__main__":
         print("No best model found. Automatically saving as best.")
         save_checkpoint(path=best_path, model=trained_model, information=information)
     elif float(best_model.get("test_accuracy", -1.0)) < current_model_accuracy:
-        print(f"Current model ({current_model_accuracy:.4f}%) did beat best model ({best_model:.4f}%).")
+        print(f"Current model ({current_model_accuracy:.4f}%) did beat best model ({float(best_model.get("test_accuracy", -1.0)):.4f}%).")
         save_checkpoint(path=best_path, model=trained_model, information=information)
     else:
-        print(f"Current model ({current_model_accuracy:.4f}%) did not beat best model ({best_model:.4f}%).")
+        print(f"Current model ({current_model_accuracy:.4f}%) did not beat best model ({float(best_model.get("test_accuracy", -1.0)):.4f}%).")
 
