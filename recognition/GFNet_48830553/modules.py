@@ -130,20 +130,23 @@ class GlobalFilter(nn.Module):
         self.h = h
         self.w = w
         # Real FFT along width dimension produces w // 2 + 1 non-redundant frequencies
-        self.complex_weight = nn.Parameter(
-            torch.randn(h, w // 2 + 1, dim, 2, dtype=torch.float32) * 0.02
-        )
+        # Initialised to unity-scale magnitude so frequency signals are not attenuated to zero at initialisation
+        # Real part initialized around 1.0, imaginary part near 0.0 with small variance
+        weight_init = torch.zeros(h, w // 2 + 1, dim, 2, dtype=torch.float32)
+        weight_init[..., 0] = 1.0 + torch.randn(h, w // 2 + 1, dim) * 0.02
+        weight_init[..., 1] = torch.randn(h, w // 2 + 1, dim) * 0.02
+        self.complex_weight = nn.Parameter(weight_init)
 
     def forward(self, x):
         B, H, W, C = x.shape
         # Convert to float32 for FFT calculation
         x = x.to(torch.float32)
 
-        # 2D Real FFT along spatial axes (H, W)
+        # 2D Real FFT along spatial axes (H, W) -> (B, H, W // 2 + 1, C)
         x_fft = torch.fft.rfft2(x, dim=(1, 2), norm='ortho')
 
-        # Form complex weights from the 2 real channels
-        weight = torch.view_as_complex(self.complex_weight)
+        # Form complex weights and explicitly add batch dimension for robust broadcasting
+        weight = torch.view_as_complex(self.complex_weight).unsqueeze(0)
         x_fft = x_fft * weight
 
         # Inverse 2D Real FFT back to spatial domain
@@ -176,21 +179,24 @@ class Mlp(nn.Module):
 
 class GFNetBlock(nn.Module):
     """
-    GFNet Transformer Block: LayerNorm -> GlobalFilter -> LayerNorm -> Mlp with residual connections.
+    GFNet Transformer Block: LayerNorm -> GlobalFilter -> LayerNorm -> Mlp with residual connections and LayerScale.
     """
     def __init__(self, dim=EMBED_DIM, h=IMG_SIZE // PATCH_SIZE, w=IMG_SIZE // PATCH_SIZE,
-                 mlp_ratio=MLP_RATIO, drop=DROPOUT_RATE):
+                 mlp_ratio=MLP_RATIO, drop=DROPOUT_RATE, init_values=1e-5):
         super(GFNetBlock, self).__init__()
         self.norm1 = nn.LayerNorm(dim)
         self.filter = GlobalFilter(dim=dim, h=h, w=w)
         self.norm2 = nn.LayerNorm(dim)
         self.mlp = Mlp(in_features=dim, hidden_features=int(dim * mlp_ratio), drop=drop)
+        # LayerScale parameters to stabilize deep residual learning
+        self.gamma1 = nn.Parameter(init_values * torch.ones(dim)) if init_values > 0 else 1.0
+        self.gamma2 = nn.Parameter(init_values * torch.ones(dim)) if init_values > 0 else 1.0
 
     def forward(self, x):
-        # Global filter sub-layer with residual connection
-        x = x + self.filter(self.norm1(x))
-        # MLP sub-layer with residual connection
-        x = x + self.mlp(self.norm2(x))
+        # Global filter sub-layer with LayerScale and residual connection
+        x = x + self.gamma1 * self.filter(self.norm1(x))
+        # MLP sub-layer with LayerScale and residual connection
+        x = x + self.gamma2 * self.mlp(self.norm2(x))
         return x
 
 
@@ -217,7 +223,7 @@ class GFNet(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, h, w, embed_dim))
         self.pos_drop = nn.Dropout(p=drop_rate)
 
-        # Transformer blocks with global Fourier filters
+        # Transformer blocks with global Fourier filters and LayerScale
         self.blocks = nn.ModuleList([
             GFNetBlock(dim=embed_dim, h=h, w=w, mlp_ratio=mlp_ratio, drop=drop_rate)
             for _ in range(depth)
@@ -238,6 +244,26 @@ class GFNet(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
+
+    def get_parameter_groups(self, weight_decay=1e-2):
+        """
+        Separates parameters into decay and no-decay groups.
+        Excludes 1D tensors (biases, LayerNorm, LayerScale), positional embeddings,
+        and complex frequency filter weights from weight decay.
+        """
+        decay_params = []
+        no_decay_params = []
+        for name, param in self.named_parameters():
+            if not param.requires_grad:
+                continue
+            if param.ndim <= 1 or name.endswith(".bias") or "pos_embed" in name or "complex_weight" in name or "gamma" in name:
+                no_decay_params.append(param)
+            else:
+                decay_params.append(param)
+        return [
+            {"params": decay_params, "weight_decay": weight_decay},
+            {"params": no_decay_params, "weight_decay": 0.0},
+        ]
 
     def forward(self, x):
         # Patch embedding: (B, C, 256, 256) -> (B, H_grid, W_grid, D)
