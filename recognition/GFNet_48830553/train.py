@@ -215,7 +215,7 @@ if __name__ == "__main__":
         model = ResNet18()
     else:
         model = GFNet()
-    print(f"Mode is {mode}...")
+    print(f"Model is {mode}...")
 
     print("Constructing paths...")
     latest_path = PATH_LATEST_MODEL + "_" + str(mode)
