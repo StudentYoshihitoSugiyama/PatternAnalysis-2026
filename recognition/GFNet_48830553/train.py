@@ -6,6 +6,7 @@ import argparse
 import torch.optim as optim
 from modules import ResNet18, GFNet, get_criterion, load_checkpoint, get_device, WEIGHT, LABEL_SMOOTHING
 from dataset import data_loaders
+import numpy as np
 
 # Global variable definitions for file paths
 PATH_LATEST_MODEL = "Models/latest"
@@ -87,6 +88,10 @@ def train(
 
     start_time = time.time()
 
+    train_losses = []
+    val_losses = []
+    epochs = []
+
     for epoch in range(1, EPOCHS + 1):      
         # --- Training Phase ---
         model.train()
@@ -131,6 +136,10 @@ def train(
         epoch_val_loss = val_loss / val_total
         epoch_val_acc = val_correct / val_total
 
+        train_losses.append(epoch_train_loss)
+        val_losses.append(epoch_val_loss)
+        epochs.append(epoch)
+
         # Step Learning Rate Scheduler
         if scheduler is not None:
             scheduler.step()
@@ -156,7 +165,7 @@ def train(
 
     print("Training finished.")
     print(f"Total Training Time: {total_training_time:.2f} seconds ({total_training_time / 60:.2f} minutes)")
-    return model, total_training_time
+    return model, total_training_time, (train_losses, val_losses, epochs)
 
 def evaluate_model(model, test_loader, criterion, device):
     """
@@ -181,7 +190,7 @@ def evaluate_model(model, test_loader, criterion, device):
     test_accuracy = test_correct / test_total
     return test_accuracy
 
-def consolidate_information(model, test_accuracy, criterion, optimiser, scheduler, device, training_time):
+def consolidate_information(model, test_accuracy, criterion, optimiser, scheduler, device, training_time, losses):
     information = {
         "model": str(model),
         "epochs": EPOCHS,
@@ -190,7 +199,8 @@ def consolidate_information(model, test_accuracy, criterion, optimiser, schedule
         "test_accuracy": test_accuracy,
         "scheduler": f"Cosine Annealing LR: (T_MAX: {EPOCHS}), (eta_min: {ETA_MIN})",
         "device": str(device),
-        "training_time": training_time
+        "training_time": training_time,
+        "losses": losses
     }
     return information
     
@@ -223,14 +233,14 @@ if __name__ == "__main__":
     device = get_device()
     model.to(device=device)
     
-    trained_model, training_time = train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
+    trained_model, training_time, losses = train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
             device=device, train_loader=train_loader, val_loader=val_loader)
     current_model_accuracy = evaluate_model(model=model, test_loader=test_loader, criterion=criterion, device=device)
     
     information = consolidate_information(
         model=trained_model, test_accuracy=current_model_accuracy, 
         criterion=criterion, optimiser=optimiser,
-        scheduler=scheduler, device=device, training_time=training_time)
+        scheduler=scheduler, device=device, training_time=training_time, losses=losses)
     
     save_checkpoint(path=latest_path, model=trained_model, information=information)
     best_model = load_checkpoint(best_path, device=device)
