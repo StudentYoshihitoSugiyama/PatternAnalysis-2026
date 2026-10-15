@@ -1,7 +1,7 @@
 import torch
 import time
 import argparse
-from modules import load_checkpoint, get_device
+from modules import load_checkpoint, get_device, ResNet18, GFNet
 from dataset import data_loaders
 from train import PATH_BEST_MODEL, PATH_LATEST_MODEL
 from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatrix, BinaryAccuracy
@@ -116,18 +116,25 @@ if __name__ == "__main__":
     print("Obtaining model path...")
     if version == "BEST" and model_version == "RN18":
         path = PATH_BEST_MODEL + "_" + model_version
+        model = ResNet18()
     elif version == "LATEST" and model_version == "RN18":
         path = PATH_LATEST_MODEL + "_" + model_version
+        model = ResNet18()
     elif version == "BEST" and model_version == "GFNET":
         path = PATH_BEST_MODEL + "_" + model_version
+        model = GFNet()
     else:
         path = PATH_LATEST_MODEL + "_" + model_version
+        model = GFNet()
 
     print("Loading model...")
-    model = load_checkpoint(path, device=device)
-    if model == None:
+    model_info = load_checkpoint(path, device=device)
+    model_weights = model_info.get("model_state_dict", None)
+
+    if model_info == None or model_weights == None:
         print("Model is None")
         raise ValueError
+    model.load_state_dict(model_weights)
     model.to(device=device)
 
     print("Constructing data loaders...")
