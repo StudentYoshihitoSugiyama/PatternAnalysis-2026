@@ -165,7 +165,7 @@ def train(
 
     print("Training finished.")
     print(f"Total Training Time: {total_training_time:.2f} seconds ({total_training_time / 60:.2f} minutes)")
-    return model, total_training_time, (train_losses, val_losses, epochs)
+    return model, total_training_time, (np.array(train_losses), np.array(val_losses), np.array(epochs))
 
 def evaluate_model(model, test_loader, criterion, device):
     """
