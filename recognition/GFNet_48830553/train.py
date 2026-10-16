@@ -245,7 +245,7 @@ if __name__ == "__main__":
     save_checkpoint(path=latest_path, model=trained_model, information=information)
     best_model_info = load_checkpoint(best_path, device=device)
     if best_model_info != None:
-        best_model_accuracy = float(best_model_info.get("information", None).get("test_accuracy", -1.0))
+        best_model_accuracy = float(best_model_info.get("information", dict()).get("test_accuracy", -1.0))
         
     if best_model_info == None:
         print(f"Current model ({current_model_accuracy:.4f})")
