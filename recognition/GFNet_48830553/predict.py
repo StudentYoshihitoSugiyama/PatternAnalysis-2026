@@ -129,11 +129,11 @@ if __name__ == "__main__":
 
     print("Loading model...")
     model_info = load_checkpoint(path, device=device)
-    model_weights = model_info.get("model_state_dict", None)
-
-    if model_info == None or model_weights == None:
+    if model_info == None:
         print("Model is None")
         raise ValueError
+    
+    model_weights = model_info.get("model_state_dict", None)
     model.load_state_dict(model_weights)
     model.to(device=device)
 
