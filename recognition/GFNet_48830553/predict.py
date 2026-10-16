@@ -5,6 +5,8 @@ from modules import load_checkpoint, get_device, ResNet18, GFNet
 from dataset import data_loaders
 from train import PATH_BEST_MODEL, PATH_LATEST_MODEL
 from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatrix, BinaryAccuracy
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def fast_evaluate_model(model, test_loader, device):
@@ -145,3 +147,13 @@ if __name__ == "__main__":
 
     print("Begin testing...")
     evaluate_model(model=model, test_loader=test_loader, device=device)
+    print("Testing Visualisation")
+    
+    loss_info = model_info.get("information").get("losses")
+    train_losses, val_losses, epochs = loss_info
+    train_losses = np.array(train_losses)
+    val_losses = np.array(val_losses)
+    epochs = np.array(epochs)
+    plt.plot(train_losses, epochs)
+    plt.plot(val_losses, epochs)
+    plt.show()
