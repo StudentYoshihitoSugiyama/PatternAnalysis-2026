@@ -13,8 +13,8 @@ PATH_LATEST_MODEL = "Models/latest"
 PATH_BEST_MODEL = "Models/best"
 
 # Hyperparameters
-EPOCHS = 20
-PATIENCE = 10
+EPOCHS = 1000
+PATIENCE = 15
 ETA_MIN = 1e-5
 LR = 0.001
 WD = 0.01
