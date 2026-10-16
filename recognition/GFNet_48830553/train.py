@@ -203,7 +203,7 @@ def consolidate_information(model, test_accuracy, criterion, optimiser, schedule
         "losses": losses
     }
     return information
-    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model training")
     parser.add_argument("--model", default="RN18", choices=["RN18", "GFNET"], help="Model to train: 'RN18' or 'GFNET'")
