@@ -134,6 +134,9 @@ if __name__ == "__main__":
         raise ValueError
     
     model_weights = model_info.get("model_state_dict", None)
+    if model_weights == None:
+        print("Model weights is None")
+        raise ValueError
     model.load_state_dict(model_weights)
     model.to(device=device)
 
