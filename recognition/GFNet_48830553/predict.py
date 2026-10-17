@@ -5,7 +5,6 @@ from modules import load_checkpoint, get_device, ResNet18, GFNet
 from dataset import data_loaders
 from train import PATH_BEST_MODEL, PATH_LATEST_MODEL
 from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatrix, BinaryAccuracy
-import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -167,9 +166,9 @@ if __name__ == "__main__":
     
     loss_info = model_info.get("information").get("losses")
     train_losses, val_losses, epochs = loss_info
-    train_losses = np.array(train_losses)
-    val_losses = np.array(val_losses)
-    epochs = np.array(epochs)
+    train_losses = train_losses
+    val_losses = val_losses
+    epochs = epochs
     plt.plot(train_losses, epochs)
     plt.plot(val_losses, epochs)
     plt.savefig(graph_path)
