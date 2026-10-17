@@ -12,8 +12,8 @@ PATH_LATEST_MODEL = "Models/latest"
 PATH_BEST_MODEL = "Models/best"
 
 # Hyperparameters
-EPOCHS = 20
-PATIENCE = 10
+EPOCHS = 1000
+PATIENCE = 15
 ETA_MIN = 1e-5
 LR = 0.001
 WD = 0.01
@@ -202,7 +202,7 @@ def consolidate_information(model, test_accuracy, criterion, optimiser, schedule
         "losses": losses
     }
     return information
-    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model training")
     parser.add_argument("--model", default="RN18", choices=["RN18", "GFNET"], help="Model to train: 'RN18' or 'GFNET'")
@@ -242,15 +242,17 @@ if __name__ == "__main__":
         scheduler=scheduler, device=device, training_time=training_time, losses=losses)
     
     save_checkpoint(path=latest_path, model=trained_model, information=information)
-    best_model = load_checkpoint(best_path, device=device)
-
-    if best_model == None:
+    best_model_info = load_checkpoint(best_path, device=device)
+    if best_model_info != None:
+        best_model_accuracy = float(best_model_info.get("information", dict()).get("test_accuracy", -1.0))
+        
+    if best_model_info == None:
         print(f"Current model ({current_model_accuracy:.4f})")
         print("No best model found. Automatically saving as best.")
         save_checkpoint(path=best_path, model=trained_model, information=information)
-    elif float(best_model.get("test_accuracy", -1.0)) < current_model_accuracy:
-        print(f"Current model ({current_model_accuracy:.4f}) did beat best model ({float(best_model.get("test_accuracy", -1.0)):.4f}).")
+    elif best_model_accuracy < current_model_accuracy:
+        print(f"Current model ({current_model_accuracy:.4f}) did beat best model ({best_model_accuracy:.4f}).")
         save_checkpoint(path=best_path, model=trained_model, information=information)
     else:
-        print(f"Current model ({current_model_accuracy:.4f}) did not beat best model ({float(best_model.get("test_accuracy", -1.0)):.4f}).")
+        print(f"Current model ({current_model_accuracy:.4f}) did not beat best model ({best_model_accuracy:.4f}).")
 
