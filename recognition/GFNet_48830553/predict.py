@@ -21,7 +21,7 @@ def fast_evaluate_model(model, test_loader, device):
     total_time = end_time - start_time
     return total_time
 
-def evaluate_model(model, test_loader, device):
+def evaluate_model(model, test_loader, device, output_path):
     """
     Evaluates the model on the test dataset
     """
@@ -103,6 +103,19 @@ def evaluate_model(model, test_loader, device):
     print(f"Inference time: {total_time:.2f}")
     print(f"Confusion Matrix: {conf_matrix}")
 
+    with open(output_path, "w") as f:
+        f.write(f"True positive confidence: {total_avg_tp_conf:.2f}\n")
+        f.write(f"True negative confidence: {total_avg_tn_conf:.2f}\n")
+        f.write(f"False positive confidence: {total_avg_fp_conf:.2f}\n")
+        f.write(f"False negative confidence: {total_avg_fn_conf:.2f}\n")
+        f.write(f"True confidence: {total_true_conf:.2f}\n")
+        f.write(f"False confidence: {total_false_conf:.2f}\n")
+        f.write(f"Precision: {precision:.2f}\n")
+        f.write(f"Recall: {recall:.2f}\n")
+        f.write(f"Test Accuracy: {test_accuracy:.2f}\n")
+        f.write(f"Inference time: {total_time:.2f}\n")
+        f.write(f"Confusion Matrix: {conf_matrix}\n")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model testing")
@@ -129,6 +142,9 @@ if __name__ == "__main__":
         path = PATH_LATEST_MODEL + "_" + model_version
         model = GFNet()
 
+    output_path = path + "_information.txt"
+    graph_path = path + "_graph.pdf"
+
     print("Loading model...")
     model_info = load_checkpoint(path, device=device)
     if model_info == None:
@@ -146,7 +162,7 @@ if __name__ == "__main__":
     _, _, test_loader = data_loaders()
 
     print("Begin testing...")
-    evaluate_model(model=model, test_loader=test_loader, device=device)
+    evaluate_model(model=model, test_loader=test_loader, device=device, output_path=output_path)
     print("Testing Visualisation")
     
     loss_info = model_info.get("information").get("losses")
@@ -156,4 +172,4 @@ if __name__ == "__main__":
     epochs = np.array(epochs)
     plt.plot(train_losses, epochs)
     plt.plot(val_losses, epochs)
-    plt.show()
+    plt.savefig(graph_path)
