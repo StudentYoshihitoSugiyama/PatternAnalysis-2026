@@ -6,7 +6,6 @@ import argparse
 import torch.optim as optim
 from modules import ResNet18, GFNet, get_criterion, load_checkpoint, get_device, WEIGHT, LABEL_SMOOTHING
 from dataset import data_loaders
-import numpy as np
 
 # Global variable definitions for file paths
 PATH_LATEST_MODEL = "Models/latest"
@@ -165,7 +164,7 @@ def train(
 
     print("Training finished.")
     print(f"Total Training Time: {total_training_time:.2f} seconds ({total_training_time / 60:.2f} minutes)")
-    return model, total_training_time, (np.array(train_losses), np.array(val_losses), np.array(epochs))
+    return model, total_training_time, (train_losses, val_losses, epochs)
 
 def evaluate_model(model, test_loader, criterion, device):
     """
