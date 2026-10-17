@@ -169,6 +169,12 @@ if __name__ == "__main__":
     train_losses = train_losses
     val_losses = val_losses
     epochs = epochs
-    plt.plot(train_losses, epochs)
-    plt.plot(val_losses, epochs)
+    plt.figure()
+    plt.plot(epochs, train_losses, label="Train Loss")
+    plt.plot(epochs, val_losses, label="Validation Loss")
+    plt.title(f"{model_version} ({version}) Training and Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
     plt.savefig(graph_path)
+    plt.close()
