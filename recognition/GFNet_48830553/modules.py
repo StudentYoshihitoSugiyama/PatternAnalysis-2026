@@ -3,18 +3,30 @@ import torch.nn as nn
 import os
 
 # ==========================================
-# GFNet Hyperparameters (Global Configuration)
+# Global Loss & Dataset Configuration
 # ==========================================
 IMG_SIZE = 256
 IN_CHANS = 1          # Greyscale images
-PATCH_SIZE = 16       # Spatial patch size: 256 / 16 = 16 patches per axis
-EMBED_DIM = 256       # Hidden embedding dimension
-DEPTH = 6             # Number of GFNet Transformer blocks
-MLP_RATIO = 4.0       # MLP expansion ratio
 NUM_CLASSES = 2       # NC (0) vs AD (1)
-DROPOUT_RATE = 0.1    # Dropout probability
-WEIGHT = None
-LABEL_SMOOTHING = 0.0
+WEIGHT = None         # Uniform class weights or balanced tensor
+LABEL_SMOOTHING = 0.05 # Mild label smoothing to mitigate overconfidence on MRI slice boundaries
+
+# ==========================================
+# ResNet-18 Hyperparameters (Default Configuration)
+# ==========================================
+RESNET18_DROPOUT_RATE = 0.2     # Regularisation before classification head (tuned for 2D MRI)
+RESNET18_DROP_PATH_RATE = 0.05  # Stochastic depth across residual blocks
+RESNET18_SE_REDUCTION = 8       # SE attention reduction ratio (8 preserves more fine-grained channel variance)
+
+# ==========================================
+# GFNet Hyperparameters (Optimized Configuration)
+# ==========================================
+PATCH_SIZE = 16       # Spatial patch size: 256 / 16 = 16 patches per axis (256 tokens)
+EMBED_DIM = 256       # Hidden embedding dimension
+DEPTH = 6             # Number of GFNet Fourier Transformer blocks
+MLP_RATIO = 4.0       # MLP expansion ratio
+DROPOUT_RATE = 0.1    # Dropout probability across MLP and positional embeddings
+INIT_VALUES = 1e-5    # LayerScale initial value for residual stability
 
 
 
@@ -67,14 +79,14 @@ class SqueezeExcitation(nn.Module):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_planes, planes, stride=1, drop_path_rate=0.0):
+    def __init__(self, in_planes, planes, stride=1, drop_path_rate=0.0, reduction=RESNET18_SE_REDUCTION):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.se = SqueezeExcitation(planes)
+        self.se = SqueezeExcitation(planes, reduction=reduction)
         self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
 
         # ResNet-D downsampling: AvgPool2d(2, 2) + Conv2d(1x1) avoids throwing away 75% of spatial data
@@ -111,12 +123,13 @@ class ResNet18(nn.Module):
     - Standard ResNet early downsampling stem: Conv2d(7x7, stride=2) + MaxPool2d(3x3, stride=2),
       downsampling 256x256 -> 64x64 to dramatically save memory and computation.
     - ResNet-D style downsampling in residual connections to retain spatial information.
-    - Squeeze-and-Excitation (SE) channel attention module in BasicBlock.
+    - Squeeze-and-Excitation (SE) channel attention module in BasicBlock with reduction=8.
     - Stochastic Depth (DropPath) regularization across residual stages.
     - Zero-initialized final BatchNorm in each residual block for identity-preserving initial state.
     - Parameter grouping method (get_parameter_groups) for weight decay decoupling.
     """
-    def __init__(self, num_classes=2, dropout_rate=0.3, drop_path_rate=0.1):
+    def __init__(self, num_classes=NUM_CLASSES, dropout_rate=RESNET18_DROPOUT_RATE,
+                 drop_path_rate=RESNET18_DROP_PATH_RATE, se_reduction=RESNET18_SE_REDUCTION):
         super(ResNet18, self).__init__()
         self.in_planes = 64
 
@@ -130,10 +143,10 @@ class ResNet18(nn.Module):
         total_blocks = 8
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, total_blocks)]
 
-        self.layer1 = self._make_layer(BasicBlock, 64, 2, stride=1, dpr=dpr[0:2])
-        self.layer2 = self._make_layer(BasicBlock, 128, 2, stride=2, dpr=dpr[2:4])
-        self.layer3 = self._make_layer(BasicBlock, 256, 2, stride=2, dpr=dpr[4:6])
-        self.layer4 = self._make_layer(BasicBlock, 512, 2, stride=2, dpr=dpr[6:8])
+        self.layer1 = self._make_layer(BasicBlock, 64, 2, stride=1, dpr=dpr[0:2], reduction=se_reduction)
+        self.layer2 = self._make_layer(BasicBlock, 128, 2, stride=2, dpr=dpr[2:4], reduction=se_reduction)
+        self.layer3 = self._make_layer(BasicBlock, 256, 2, stride=2, dpr=dpr[4:6], reduction=se_reduction)
+        self.layer4 = self._make_layer(BasicBlock, 512, 2, stride=2, dpr=dpr[6:8], reduction=se_reduction)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate > 0 else nn.Identity()
@@ -154,11 +167,11 @@ class ResNet18(nn.Module):
             if isinstance(m, BasicBlock):
                 nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, num_blocks, stride, dpr):
+    def _make_layer(self, block, planes, num_blocks, stride, dpr, reduction=RESNET18_SE_REDUCTION):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for i, s in enumerate(strides):
-            layers.append(block(self.in_planes, planes, stride=s, drop_path_rate=dpr[i]))
+            layers.append(block(self.in_planes, planes, stride=s, drop_path_rate=dpr[i], reduction=reduction))
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
@@ -282,7 +295,7 @@ class GFNetBlock(nn.Module):
     GFNet Transformer Block: LayerNorm -> GlobalFilter -> LayerNorm -> Mlp with residual connections and LayerScale.
     """
     def __init__(self, dim=EMBED_DIM, h=IMG_SIZE // PATCH_SIZE, w=IMG_SIZE // PATCH_SIZE,
-                 mlp_ratio=MLP_RATIO, drop=DROPOUT_RATE, init_values=1e-5):
+                 mlp_ratio=MLP_RATIO, drop=DROPOUT_RATE, init_values=INIT_VALUES):
         super(GFNetBlock, self).__init__()
         self.norm1 = nn.LayerNorm(dim)
         self.filter = GlobalFilter(dim=dim, h=h, w=w)
@@ -306,7 +319,7 @@ class GFNet(nn.Module):
     """
     def __init__(self, img_size=IMG_SIZE, patch_size=PATCH_SIZE, in_chans=IN_CHANS,
                  num_classes=NUM_CLASSES, embed_dim=EMBED_DIM, depth=DEPTH,
-                 mlp_ratio=MLP_RATIO, drop_rate=DROPOUT_RATE):
+                 mlp_ratio=MLP_RATIO, drop_rate=DROPOUT_RATE, init_values=INIT_VALUES):
         super(GFNet, self).__init__()
         self.num_classes = num_classes
         self.embed_dim = embed_dim
@@ -325,7 +338,7 @@ class GFNet(nn.Module):
 
         # Transformer blocks with global Fourier filters and LayerScale
         self.blocks = nn.ModuleList([
-            GFNetBlock(dim=embed_dim, h=h, w=w, mlp_ratio=mlp_ratio, drop=drop_rate)
+            GFNetBlock(dim=embed_dim, h=h, w=w, mlp_ratio=mlp_ratio, drop=drop_rate, init_values=init_values)
             for _ in range(depth)
         ])
 
