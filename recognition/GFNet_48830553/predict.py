@@ -64,10 +64,10 @@ def evaluate_model(model, test_loader, device, output_path):
             fn_mask = (preds == 0) & (batch_y == 1)  # False Negative
 
             # 3. Calculate average probabilities (with checks to avoid NaN if a batch lacks a category)
-            avg_tp_conf = prob_positive[tp_mask].mean() if tp_mask.any() else torch.tensor(0.0)
-            avg_fp_conf = prob_positive[fp_mask].mean() if fp_mask.any() else torch.tensor(0.0)
-            avg_fn_conf = prob_positive[fn_mask].mean() if fn_mask.any() else torch.tensor(0.0)
-            avg_tn_conf = prob_negative[tn_mask].mean() if tn_mask.any() else torch.tensor(0.0)
+            avg_tp_conf = prob_positive[tp_mask].mean().item() if tp_mask.any() else 0.0
+            avg_fp_conf = prob_positive[fp_mask].mean().item() if fp_mask.any() else 0.0
+            avg_fn_conf = prob_positive[fn_mask].mean().item() if fn_mask.any() else 0.0
+            avg_tn_conf = prob_negative[tn_mask].mean().item() if tn_mask.any() else 0.0
 
             acc_tp_conf += avg_tp_conf
             acc_tn_conf += avg_tn_conf
@@ -82,8 +82,8 @@ def evaluate_model(model, test_loader, device, output_path):
     total_avg_tn_conf = acc_tn_conf/ batch_count
     total_avg_fp_conf = acc_fp_conf / batch_count
     total_avg_fn_conf = acc_fn_conf / batch_count
-    total_true_conf = torch.mean((total_avg_tp_conf, total_avg_tn_conf))
-    total_false_conf = torch.mean((total_avg_fp_conf, total_avg_fn_conf))
+    total_true_conf = (total_avg_tp_conf + total_avg_tn_conf) / 2.0
+    total_false_conf = (total_avg_fp_conf + total_avg_fn_conf) / 2.0
 
     precision = precision_metric.compute()
     recall = recall_metric.compute()
