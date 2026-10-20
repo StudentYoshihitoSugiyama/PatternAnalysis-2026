@@ -146,6 +146,7 @@ if __name__ == "__main__":
 
 
     os.makedirs(os.path.dirname(result_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(graph_path) or ".", exist_ok=True)
 
     print("Loading model...")
     model_info = load_checkpoint(model_path, device=device)
