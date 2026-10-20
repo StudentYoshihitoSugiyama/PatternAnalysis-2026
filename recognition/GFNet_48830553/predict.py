@@ -141,11 +141,11 @@ if __name__ == "__main__":
     else:
         model_path = PATH_LATEST_MODEL + "_" + model_version
 
-    output_path = "Results/" + output_path + "_information.txt"
+    result_path = "Results/" + output_path + "_information.txt"
     graph_path = "Results/" + output_path + "_graph.pdf"
 
 
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(result_path) or ".", exist_ok=True)
 
     print("Loading model...")
     model_info = load_checkpoint(model_path, device=device)
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     _, _, test_loader = data_loaders()
 
     print("Begin testing...")
-    evaluate_model(model=model, test_loader=test_loader, device=device, output_path=output_path)
+    evaluate_model(model=model, test_loader=test_loader, device=device, output_path=result_path)
     print("Testing Visualisation")
     
     loss_info = model_info.get("information").get("losses")
