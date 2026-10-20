@@ -25,8 +25,8 @@ def evaluate_model(model, test_loader, device, output_path):
     """
     Evaluates the model on the test dataset
     """
-    precision_metric = BinaryPrecision(average="macro", device=device)
-    recall_metric = BinaryRecall(average="macro", device=device)
+    precision_metric = BinaryPrecision(device=device)
+    recall_metric = BinaryRecall(device=device)
     confusion_matrix_metric = BinaryConfusionMatrix(device=device)
     accuracy_metric = BinaryAccuracy(device=device)
 
