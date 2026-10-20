@@ -414,7 +414,7 @@ def load_checkpoint(path, device):
         else:
             return None
     try:
-        return torch.load(target_path, map_location=device)
+        return torch.load(target_path, map_location=device, weights_only=False)
     except Exception as e:
         print(f"Warning: Could not load checkpoint from '{target_path}': {e}")
         return None
