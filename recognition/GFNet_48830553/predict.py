@@ -144,7 +144,6 @@ if __name__ == "__main__":
     result_path = "Results/" + output_path + "_information.txt"
     graph_path = "Results/" + output_path + "_graph.pdf"
 
-
     os.makedirs(os.path.dirname(result_path) or ".", exist_ok=True)
     os.makedirs(os.path.dirname(graph_path) or ".", exist_ok=True)
 
@@ -167,7 +166,10 @@ if __name__ == "__main__":
 
     print("Begin testing...")
     evaluate_model(model=model, test_loader=test_loader, device=device, output_path=result_path)
+    
     print("Testing Visualisation")
+    print(f"Result Path: {result_path}")
+    print(f"Graph Path: {graph_path}")
     
     loss_info = model_info.get("information").get("losses")
     train_losses, val_losses, epochs = loss_info
