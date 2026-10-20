@@ -1,6 +1,7 @@
 import torch
 import time
 import argparse
+import os
 from modules import load_checkpoint, get_device, ResNet18, GFNet
 from dataset import data_loaders
 from train import PATH_BEST_MODEL, PATH_LATEST_MODEL
@@ -128,24 +129,26 @@ if __name__ == "__main__":
     device = get_device()
 
     print("Obtaining model path...")
-    if version == "BEST" and model_version == "RN18":
-        path = PATH_BEST_MODEL + "_" + model_version
+    if model_version == "RN18":
+        output_path = version + "_" + model_version
         model = ResNet18()
-    elif version == "LATEST" and model_version == "RN18":
-        path = PATH_LATEST_MODEL + "_" + model_version
-        model = ResNet18()
-    elif version == "BEST" and model_version == "GFNET":
-        path = PATH_BEST_MODEL + "_" + model_version
-        model = GFNet()
     else:
-        path = PATH_LATEST_MODEL + "_" + model_version
+        output_path = version + "_" + model_version
         model = GFNet()
 
-    output_path = path + "_information.txt"
-    graph_path = path + "_graph.pdf"
+    if version == "BEST":
+            model_path = PATH_BEST_MODEL + "_" + model_version
+    else:
+        model_path = PATH_LATEST_MODEL + "_" + model_version
+
+    output_path = "Results/" + output_path + "_information.txt"
+    graph_path = "Results/" + output_path + "_graph.pdf"
+
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
 
     print("Loading model...")
-    model_info = load_checkpoint(path, device=device)
+    model_info = load_checkpoint(model_path, device=device)
     if model_info == None:
         print("Model is None")
         raise ValueError
@@ -154,6 +157,7 @@ if __name__ == "__main__":
     if model_weights == None:
         print("Model weights is None")
         raise ValueError
+    
     model.load_state_dict(model_weights)
     model.to(device=device)
 
