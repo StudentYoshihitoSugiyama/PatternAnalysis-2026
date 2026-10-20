@@ -13,10 +13,10 @@ PATH_BEST_MODEL = "Models/best"
 
 # Hyperparameters
 EPOCHS = 1000
-PATIENCE = 15
-ETA_MIN = 1e-5
+PATIENCE = 30
+ETA_MIN = 0.00005
 LR = 0.001
-WD = 0.01
+WD = 0.001
 
 class EarlyStopping:
     """
@@ -80,7 +80,7 @@ def train(
     """
     print(f"\nBeginning training on device '{device}' for {EPOCHS} epochs...")
 
-    early_stopping = EarlyStopping()
+    early_stopping = EarlyStopping(patience=PATIENCE)
 
     if torch.cuda.is_available():
         torch.cuda.synchronize()
