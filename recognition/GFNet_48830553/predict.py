@@ -44,30 +44,25 @@ def evaluate_model(model, test_loader, device, output_path):
             batch_X, batch_y = batch_X.to(device), batch_y.to(device)
             outputs = model(batch_X)
 
-            _, preds = torch.max(outputs, 1)
+            probs = torch.softmax(outputs, dim=1)
+            max_probs, preds = torch.max(probs, 1)
 
             precision_metric.update(preds, batch_y)
             recall_metric.update(preds, batch_y)
             confusion_matrix_metric.update(preds, batch_y)
             accuracy_metric.update(preds, batch_y)
 
-            probs = torch.softmax(outputs, dim=1)
-            # Get the probability assigned to the positive class (class 1)
-            prob_positive = probs[:, 1]
-            # Get the probability assigned to the negative class (class 0)
-            prob_negative = probs[:, 0]
-
-            # 2. Create boolean masks for each outcome category (Binary classification example)
+            # 2. Create boolean masks for each outcome category
             tp_mask = (preds == 1) & (batch_y == 1)  # True Positive
             tn_mask = (preds == 0) & (batch_y == 0)  # True Negative
             fp_mask = (preds == 1) & (batch_y == 0)  # False Positive
             fn_mask = (preds == 0) & (batch_y == 1)  # False Negative
 
             # 3. Calculate average probabilities (with checks to avoid NaN if a batch lacks a category)
-            avg_tp_conf = prob_positive[tp_mask].mean().item() if tp_mask.any() else 0.0
-            avg_fp_conf = prob_positive[fp_mask].mean().item() if fp_mask.any() else 0.0
-            avg_fn_conf = prob_positive[fn_mask].mean().item() if fn_mask.any() else 0.0
-            avg_tn_conf = prob_negative[tn_mask].mean().item() if tn_mask.any() else 0.0
+            avg_tp_conf = max_probs[tp_mask].mean().item() if tp_mask.any() else 0.0
+            avg_fp_conf = max_probs[fp_mask].mean().item() if fp_mask.any() else 0.0
+            avg_fn_conf = max_probs[fn_mask].mean().item() if fn_mask.any() else 0.0
+            avg_tn_conf = max_probs[tn_mask].mean().item() if tn_mask.any() else 0.0
 
             acc_tp_conf += avg_tp_conf
             acc_tn_conf += avg_tn_conf
