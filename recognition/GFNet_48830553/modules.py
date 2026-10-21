@@ -26,7 +26,7 @@ EMBED_DIM = 256       # Hidden embedding dimension
 DEPTH = 6             # Number of GFNet Fourier Transformer blocks
 MLP_RATIO = 4.0       # MLP expansion ratio
 DROPOUT_RATE = 0.1    # Dropout probability across MLP and positional embeddings
-INIT_VALUES = 1e-5    # LayerScale initial value for residual stability
+INIT_VALUES = 1e-1    # LayerScale initial value (calibrated to 0.1 for shallow 6-layer GFNet to prevent signal attenuation and enable gradient flow)
 
 
 
