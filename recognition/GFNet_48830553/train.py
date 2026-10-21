@@ -12,9 +12,10 @@ PATH_LATEST_MODEL = "Models/latest"
 PATH_BEST_MODEL = "Models/best"
 
 # Hyperparameters
-EPOCHS = 1000
-PATIENCE = 30
-ETA_MIN = 0.00005
+EPOCHS = 100
+WARMUP_EPOCHS = 5
+PATIENCE = 25
+ETA_MIN = 1e-6
 LR = 0.001
 WD = 0.001
 
@@ -196,7 +197,7 @@ def consolidate_information(model, test_accuracy, criterion, optimiser, schedule
         "criterion": f"Cross-Entropy: (weight: {WEIGHT}), (label smoothing: {LABEL_SMOOTHING})",
         "optimiser": "ADAMW: " + str(optimiser.state_dict()["param_groups"]),
         "test_accuracy": test_accuracy,
-        "scheduler": f"Cosine Annealing LR: (T_MAX: {EPOCHS}), (eta_min: {ETA_MIN})",
+        "scheduler": f"Linear Warmup ({WARMUP_EPOCHS} epochs) + Cosine Annealing (T_max: {max(EPOCHS - WARMUP_EPOCHS, 1)}, eta_min: {ETA_MIN})",
         "device": str(device),
         "training_time": training_time,
         "losses": losses
@@ -225,7 +226,15 @@ if __name__ == "__main__":
 
     print("Constructing optimiser, scheduler, and criterion...")
     optimiser = optim.AdamW(params=model.parameters(), lr=LR, weight_decay=WD)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=EPOCHS, eta_min=ETA_MIN)
+    warmup_scheduler = optim.lr_scheduler.LinearLR(
+        optimiser, start_factor=0.01, end_factor=1.0, total_iters=WARMUP_EPOCHS
+    )
+    cosine_scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimiser, T_max=max(EPOCHS - WARMUP_EPOCHS, 1), eta_min=ETA_MIN
+    )
+    scheduler = optim.lr_scheduler.SequentialLR(
+        optimiser, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[WARMUP_EPOCHS]
+    )
     criterion = get_criterion()
 
     print("Obtaining device...")
