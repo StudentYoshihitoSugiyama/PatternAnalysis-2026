@@ -83,7 +83,8 @@ def train(
 
     early_stopping = EarlyStopping(patience=PATIENCE)
     use_cuda = device.type == "cuda"
-    scaler = torch.cuda.amp.GradScaler(enabled=use_cuda)
+    device_type = "cuda" if use_cuda else "cpu"
+    scaler = torch.amp.GradScaler("cuda", enabled=use_cuda)
 
     if torch.cuda.is_available():
         torch.cuda.synchronize()
@@ -105,7 +106,7 @@ def train(
             batch_X, batch_y = batch_X.to(device), batch_y.to(device)
 
             optimizer.zero_grad()
-            with torch.cuda.amp.autocast(enabled=use_cuda):
+            with torch.amp.autocast(device_type=device_type, enabled=use_cuda):
                 outputs = model(batch_X)
                 loss = criterion(outputs, batch_y)
 
@@ -130,7 +131,7 @@ def train(
         with torch.no_grad():
             for batch_X, batch_y in val_loader:
                 batch_X, batch_y = batch_X.to(device), batch_y.to(device)
-                with torch.cuda.amp.autocast(enabled=use_cuda):
+                with torch.amp.autocast(device_type=device_type, enabled=use_cuda):
                     outputs = model(batch_X)
                     loss = criterion(outputs, batch_y)
 
@@ -182,11 +183,12 @@ def evaluate_model(model, test_loader, criterion, device):
     test_correct = 0
     test_total = 0
     use_cuda = device.type == "cuda"
+    device_type = "cuda" if use_cuda else "cpu"
 
     with torch.no_grad():
         for batch_X, batch_y in test_loader:
             batch_X, batch_y = batch_X.to(device), batch_y.to(device)
-            with torch.cuda.amp.autocast(enabled=use_cuda):
+            with torch.amp.autocast(device_type=device_type, enabled=use_cuda):
                 outputs = model(batch_X)
                 loss = criterion(outputs, batch_y)
 
