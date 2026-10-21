@@ -21,7 +21,7 @@ RESNET18_SE_REDUCTION = 8       # SE attention reduction ratio (8 preserves more
 # ==========================================
 # GFNet Hyperparameters (Optimized Configuration)
 # ==========================================
-PATCH_SIZE = 16       # Spatial patch size: 256 / 16 = 16 patches per axis (256 tokens)
+PATCH_SIZE = 8        # Spatial patch size: 256 / 8 = 32 patches per axis (1024 tokens for finer spatial resolution)
 EMBED_DIM = 256       # Hidden embedding dimension
 DEPTH = 6             # Number of GFNet Fourier Transformer blocks
 MLP_RATIO = 4.0       # MLP expansion ratio
