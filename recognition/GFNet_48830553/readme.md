@@ -62,6 +62,53 @@ Firstly, data processing and loading functions are created in the "dataset.py" f
 
 ## Feasibility Report
 
+*Name: Yoshihito Sugiyama*
+*ID: 48830553*
+
+### User Need, Scope & Acceptance Criteria
+
+#### User
+
+Patients for quicker and more reliable cancer checkups; doctors to reduce workload and allow focus on more difficult analysis
+
+#### Purpose
+
+To demonstrate that a model can reliably determine cancer/normal organs with an appropriate level of confidence
+
+#### Acceptance Criteria
+
+- If there is a significant difference between correct confident answers and wrong uncertain answers, a threshold can be placed to direct uncertain cases to doctors.
+- If there are significant and reliable answers, the model may prove to be useful (0-1 Error and PR).
+- If the inference time is shorter than the average doctor’s time to determine anomalous brain structure.
+
+### Model Choice & Course Concepts
+
+- By using FFT, GFNet can have the accuracy of a transformer model with the speed of FFTs
+- No self-attention layer (replaced by global filter)
+- No cross-attention layer (Classification problem)
+
+### Preliminary Feasibility Evidence
+
+#### ResNet18 (20 Epochs max)
+
+- Final Train Acc: 0.7298
+- Final Val Acc: 0.7220
+- Final Test Acc: 0.6326
+- Training Time: 809.85 seconds (13.50 minutes)
+
+#### GFNet (20 Epochs max)
+
+- Final Train Acc: 0.8356
+- Final Val Acc: 0.7310
+- Final Test Acc: 0.6258
+- Training Time: 841.66 seconds (14.03 minutes)
+
+### Risks, Budget & Fallback
+
+- Less than 1 hour of training on the whole dataset with 20 epochs
+- A100 GPU with 40GB - 80GB of memory
+- Access to EAIT Labs computers, AWS GPUs, and Rangpur GPUs
+
 ## References
 
 ## AI Reference
