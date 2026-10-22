@@ -110,3 +110,5 @@ To demonstrate that a model can reliably determine cancer/normal organs with an 
 ## References
 
 ## AI Reference
+
+Gemini 3.8 Low, Medium, and High was used to create the code and suggest improvements on the training loop and models.
