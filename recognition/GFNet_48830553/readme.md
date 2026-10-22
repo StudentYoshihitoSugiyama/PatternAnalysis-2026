@@ -1,8 +1,10 @@
 # GFNET Project
 
-Name: Yoshihito Sugiyama
-ID: 48830553
-Dependencies: torch, torchvision, torcheval, matplotlib
+*By Yoshihito Sugiyama*  
+
+*ID: 48830553*
+
+*Dependencies: torch, torchvision, torcheval, matplotlib*
 
 ## Files
 
