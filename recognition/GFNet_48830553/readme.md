@@ -42,6 +42,20 @@ The data is stored as NC classes and AD classes for both provided training and t
 
 ## Process
 
+Firstly, data processing and loading functions are created in the "dataset.py" file. Secondly, the main training loop function is constructed in the "train.py" file. Thirdly, the main testing function is created in the "predict.py" file. All repeated functions are saved in the "modules.py" file.
+
+### Problems
+
+- Memory: Reduced batch size to reduce overall memory usage in each batch to fit Nvidia A100
+- Epoch: Initial max epoch was small (5) to check for feasibility, but was increased once feasibility was checked
+- Hours: After initial run, estimated training time was reduced in batch files
+- Weight Decay: Weight decay prevented learning in some parameters and was changed to be selective on which parameters to have weight decay
+- Drop Paths: Added drop paths to improve ResNet18
+- Data Augmentation: Added data augmentation to improve accuracy
+- Learning Rate: Adjusted learning rate to allow warming up for improved accuracy
+- Initial Values: Adjusting initial values of parameters for faster and stable convergence
+- Patch Size: Reduce patch size for finer and granular patching to improve local feature extraction
+
 ## Conclusion
 
 ## Feasibility Report
