@@ -40,4 +40,12 @@ To answer the dilemma, confidence of each winning class prediction will be analy
 
 The data is stored as NC classes and AD classes for both provided training and testing datasets. The training dataset is further splitted into validation (20%) and training (80%) data loaders. Furthermore, during the data split, the datasets are splitted with respect to the patients to ensure no data leakage occurs. Moreover, the data is splitted with even distribution of classes in the validation and training data loaders.
 
+## Process
 
+## Conclusion
+
+## Feasibility Report
+
+## References
+
+## AI Reference
