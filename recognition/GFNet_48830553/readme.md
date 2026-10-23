@@ -1,8 +1,7 @@
 # GFNET Project
 
-*By Yoshihito Sugiyama*  
-*ID: 48830553*  
-*Dependencies: torch, torchvision, torcheval, matplotlib*  
+Created by Yoshihito Sugiyama  
+ID: 48830553  
 
 ## Files
 
@@ -21,6 +20,19 @@ Includes the testing pipeline to analyse models for performance in accuracy and 
 ### train.py
 
 Includes the training pipeline to train and save models.
+
+## Usage
+
+### Requirements
+
+- torch=2.14.1
+- torchvision=0.29.1
+- torcheval=0.0.7
+- matplotlib=3.11.2
+
+### Instructions
+
+After installing the dependencies, run "train.py" with appropriate flags to train either a ResNet18 model or a GFNet model. Run "predict.py" to test a ResNet18 model or a GFNet model to analyse performance.
 
 ## Introduction
 
