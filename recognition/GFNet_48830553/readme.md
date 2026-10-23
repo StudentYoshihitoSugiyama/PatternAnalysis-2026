@@ -56,6 +56,10 @@ Firstly, data processing and loading functions are created in the "dataset.py" f
 - Initial Values: Adjusting initial values of parameters for faster and stable convergence
 - Patch Size: Reduce patch size for finer and granular patching to improve local feature extraction
 
+### Results
+
+### Discussion
+
 ## Conclusion
 
 ## Feasibility Report
