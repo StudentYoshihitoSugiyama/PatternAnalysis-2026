@@ -6,6 +6,11 @@ import torch
 import torch.nn.functional as F
 import torchvision.utils as vutils
 from torch.utils.data import DataLoader
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 from modules import GFNet, ResNet18, get_device, load_checkpoint
 from dataset import ADNIDataset, data_preprocess, _load_test_samples, DATA_TEST_PATH, BATCH_SIZE
 from train import PATH_BEST_MODEL
