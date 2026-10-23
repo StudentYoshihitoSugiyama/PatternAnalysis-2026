@@ -21,7 +21,7 @@ def get_best_model_checkpoint(model_name: str) -> str:
     Resolves the best model checkpoint path imported from train.py
     based on the chosen model architecture.
     """
-    return PATH_BEST_MODEL + "_" + str(model_name)
+    return PATH_BEST_MODEL + "_" + str(model_name) + ".pt"
 
 
 def load_model(model_name: str, checkpoint_path: str, device: torch.device):

@@ -228,8 +228,8 @@ if __name__ == "__main__":
     print(f"Model is {mode}...")
 
     print("Constructing paths...")
-    latest_path = PATH_LATEST_MODEL + "_" + str(mode)
-    best_path = PATH_BEST_MODEL + "_" + str(mode)
+    latest_path = PATH_LATEST_MODEL + "_" + str(mode) + ".pt"
+    best_path = PATH_BEST_MODEL + "_" + str(mode) + ".pt"
 
     print("Constructing data loaders...")
     train_loader, val_loader, test_loader = data_loaders()

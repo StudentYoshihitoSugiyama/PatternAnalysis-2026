@@ -132,9 +132,9 @@ if __name__ == "__main__":
         model = GFNet()
 
     if version == "BEST":
-            model_path = PATH_BEST_MODEL + "_" + model_version
+            model_path = PATH_BEST_MODEL + "_" + model_version + ".pt"
     else:
-        model_path = PATH_LATEST_MODEL + "_" + model_version
+        model_path = PATH_LATEST_MODEL + "_" + model_version + ".pt"
 
     result_path = "Results/" + output_path + "_information.txt"
     graph_path = "Results/" + output_path + "_graph.pdf"
