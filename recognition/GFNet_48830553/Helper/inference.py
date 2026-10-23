@@ -154,7 +154,7 @@ def save_selected_images(categorized_samples, output_dir):
 
 def main():
     parser = argparse.ArgumentParser(description="Inference script for chosen ADNI classification model.")
-    parser.add_argument("--model", default="RN18", choices=["RN18", "GFNET"], help="Model to train: 'RN18' or 'GFNET'")
+    parser.add_argument("--model", default="GFNET", choices=["RN18", "GFNET"], help="Model to train: 'RN18' or 'GFNET'")
     parser.add_argument("--test_dir", type=str, default=DATA_TEST_PATH,
                         help="Path to the test dataset.")
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE,
