@@ -26,6 +26,8 @@ EMBED_DIM = 256       # Hidden embedding dimension
 DEPTH = 6             # Number of GFNet Fourier Transformer blocks
 MLP_RATIO = 4.0       # MLP expansion ratio
 DROPOUT_RATE = 0.1    # Dropout probability across MLP and positional embeddings
+DROP_PATH_RATE = 0.1  # Stochastic depth rate across GFNet blocks to prevent overfitting
+HEAD_DROPOUT_RATE = 0.2 # Dropout probability before the classification head
 INIT_VALUES = 1e-1    # LayerScale initial value (calibrated to 0.1 for shallow 6-layer GFNet to prevent signal attenuation and enable gradient flow)
 
 
@@ -292,10 +294,10 @@ class Mlp(nn.Module):
 
 class GFNetBlock(nn.Module):
     """
-    GFNet Transformer Block: LayerNorm -> GlobalFilter -> LayerNorm -> Mlp with residual connections and LayerScale.
+    GFNet Transformer Block: LayerNorm -> GlobalFilter -> LayerNorm -> Mlp with residual connections, LayerScale, and DropPath.
     """
     def __init__(self, dim=EMBED_DIM, h=IMG_SIZE // PATCH_SIZE, w=IMG_SIZE // PATCH_SIZE,
-                 mlp_ratio=MLP_RATIO, drop=DROPOUT_RATE, init_values=INIT_VALUES):
+                 mlp_ratio=MLP_RATIO, drop=DROPOUT_RATE, drop_path=0.0, init_values=INIT_VALUES):
         super(GFNetBlock, self).__init__()
         self.norm1 = nn.LayerNorm(dim)
         self.filter = GlobalFilter(dim=dim, h=h, w=w)
@@ -304,12 +306,14 @@ class GFNetBlock(nn.Module):
         # LayerScale parameters to stabilize deep residual learning
         self.gamma1 = nn.Parameter(init_values * torch.ones(dim)) if init_values > 0 else 1.0
         self.gamma2 = nn.Parameter(init_values * torch.ones(dim)) if init_values > 0 else 1.0
+        self.drop_path1 = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        self.drop_path2 = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
     def forward(self, x):
-        # Global filter sub-layer with LayerScale and residual connection
-        x = x + self.gamma1 * self.filter(self.norm1(x))
-        # MLP sub-layer with LayerScale and residual connection
-        x = x + self.gamma2 * self.mlp(self.norm2(x))
+        # Global filter sub-layer with LayerScale, DropPath, and residual connection
+        x = x + self.drop_path1(self.gamma1 * self.filter(self.norm1(x)))
+        # MLP sub-layer with LayerScale, DropPath, and residual connection
+        x = x + self.drop_path2(self.gamma2 * self.mlp(self.norm2(x)))
         return x
 
 
@@ -319,7 +323,8 @@ class GFNet(nn.Module):
     """
     def __init__(self, img_size=IMG_SIZE, patch_size=PATCH_SIZE, in_chans=IN_CHANS,
                  num_classes=NUM_CLASSES, embed_dim=EMBED_DIM, depth=DEPTH,
-                 mlp_ratio=MLP_RATIO, drop_rate=DROPOUT_RATE, init_values=INIT_VALUES):
+                 mlp_ratio=MLP_RATIO, drop_rate=DROPOUT_RATE, drop_path_rate=DROP_PATH_RATE,
+                 head_drop_rate=HEAD_DROPOUT_RATE, init_values=INIT_VALUES):
         super(GFNet, self).__init__()
         self.num_classes = num_classes
         self.embed_dim = embed_dim
@@ -336,13 +341,20 @@ class GFNet(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, h, w, embed_dim))
         self.pos_drop = nn.Dropout(p=drop_rate)
 
-        # Transformer blocks with global Fourier filters and LayerScale
+        # Stochastic depth decay rule across transformer layers
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]
+
+        # Transformer blocks with global Fourier filters, LayerScale, and DropPath
         self.blocks = nn.ModuleList([
-            GFNetBlock(dim=embed_dim, h=h, w=w, mlp_ratio=mlp_ratio, drop=drop_rate, init_values=init_values)
-            for _ in range(depth)
+            GFNetBlock(
+                dim=embed_dim, h=h, w=w, mlp_ratio=mlp_ratio,
+                drop=drop_rate, drop_path=dpr[i], init_values=init_values
+            )
+            for i in range(depth)
         ])
 
         self.norm = nn.LayerNorm(embed_dim)
+        self.head_drop = nn.Dropout(p=head_drop_rate) if head_drop_rate > 0 else nn.Identity()
         self.head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
         # Initialize positional embeddings
@@ -391,6 +403,7 @@ class GFNet(nn.Module):
         x = self.norm(x)
         # Global average pooling over spatial grid dimensions (H_grid, W_grid)
         x = x.mean(dim=(1, 2))
+        x = self.head_drop(x)
         logits = self.head(x)
         return logits
 
