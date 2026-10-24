@@ -57,6 +57,7 @@ def data_preprocess():
             interpolation=transforms.InterpolationMode.BILINEAR,
             fill=0
         ),
+        transforms.ColorJitter(brightness=0.5, contrast=0.15),
         transforms.ToTensor(),
         transforms.Normalize(mean=NORM_MEAN, std=NORM_STD)
     ])
