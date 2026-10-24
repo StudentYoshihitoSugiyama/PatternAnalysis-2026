@@ -21,10 +21,11 @@ WD = 0.05
 
 class EarlyStopping:
     """
-    Early stopping monitor to halt training when validation loss stops improving,
+    Early stopping monitor to halt training when validation metric stops improving,
     preventing overfitting and restoring the optimal model weights.
+    Monitors validation accuracy (with validation loss as tie-breaker).
     """
-    def __init__(self, patience=5, min_delta=1e-3, verbose=True):
+    def __init__(self, patience=PATIENCE, min_delta=1e-4, verbose=True):
         self.patience = patience
         self.min_delta = min_delta
         self.verbose = verbose
@@ -50,7 +51,7 @@ class EarlyStopping:
         else:
             self.counter += 1
             if self.verbose:
-                print(f" -> EarlyStopping counter: {self.counter}/{self.patience} (Best Val Loss: {self.best_loss:.4f} at epoch {self.best_epoch})")
+                print(f" -> EarlyStopping counter: {self.counter}/{self.patience} (Best Val Acc: {self.best_acc:.4f}, Val Loss: {self.best_loss:.4f} at epoch {self.best_epoch})")
             if self.counter >= self.patience:
                 self.early_stop = True
 
@@ -58,7 +59,7 @@ class EarlyStopping:
         if self.best_weights is not None:
             model.load_state_dict(self.best_weights)
             if self.verbose:
-                print(f"Restored best model weights from epoch {self.best_epoch} (Val Loss: {self.best_loss:.4f}).")
+                print(f"Restored best model weights from epoch {self.best_epoch} (Val Acc: {self.best_acc:.4f}, Val Loss: {self.best_loss:.4f}).")
 
 def save_checkpoint(path, model, information):
     """
@@ -93,6 +94,7 @@ def train(
     scaler = torch.amp.GradScaler("cuda", enabled=use_cuda)
 
     if torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
         torch.cuda.synchronize()
 
     start_time = time.time()
@@ -117,6 +119,8 @@ def train(
                 loss = criterion(outputs, batch_y)
 
             scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             scaler.step(optimizer)
             scaler.update()
 
