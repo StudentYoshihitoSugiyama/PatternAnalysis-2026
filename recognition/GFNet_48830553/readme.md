@@ -62,11 +62,12 @@ Firstly, data processing and loading functions are created in the "dataset.py" f
 - Epoch: Initial max epoch was small (5) to check for feasibility, but was increased once feasibility was checked
 - Hours: After initial run, estimated training time was reduced in batch files
 - Weight Decay: Weight decay prevented learning in some parameters and was changed to be selective on which parameters to have weight decay
-- Drop Paths: Added drop paths to improve ResNet18
-- Data Augmentation: Added data augmentation to improve accuracy
+- Drop Paths: Added drop paths to improve ResNet18 and GFNet
+- Data Augmentation: Added data augmentation (Jitter, Flips, Affine, Erasing, and Gaussian Blur)to improve accuracy
 - Learning Rate: Adjusted learning rate to allow warming up for improved accuracy
 - Initial Values: Adjusting initial values of parameters for faster and stable convergence
 - Patch Size: Reduce patch size for finer and granular patching to improve local feature extraction
+- Training Time: Integrated CUDA and A100 related code to improve training time by utilising specific hardware
 
 ### Results
 
