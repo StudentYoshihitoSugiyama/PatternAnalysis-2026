@@ -84,17 +84,27 @@ def train(
 ):
     """
     Trains the provided model on the ADNI dataset with Automatic Mixed Precision (AMP),
-    gradient clipping, and early stopping.
+    gradient clipping, early stopping, and CUDA/A100 hardware acceleration.
     """
     print(f"\nBeginning training on device '{device}' for {EPOCHS} epochs...")
 
     early_stopping = EarlyStopping(patience=PATIENCE)
     use_cuda = device.type == "cuda"
     device_type = "cuda" if use_cuda else "cpu"
-    scaler = torch.amp.GradScaler("cuda", enabled=use_cuda)
+
+    # Configure CUDA / Nvidia A100 performance optimizations
+    if use_cuda:
+        torch.backends.cudnn.benchmark = True
+        if hasattr(torch.backends.cuda.matmul, "allow_tf32"):
+            torch.backends.cuda.matmul.allow_tf32 = True
+        if hasattr(torch.backends.cudnn, "allow_tf32"):
+            torch.backends.cudnn.allow_tf32 = True
+
+    # Use native bfloat16 on Ampere A100 architecture for high dynamic range & throughput; fallback to float16
+    amp_dtype = torch.bfloat16 if (use_cuda and torch.cuda.is_bf16_supported()) else torch.float16
+    scaler = torch.amp.GradScaler("cuda", enabled=(use_cuda and amp_dtype == torch.float16))
 
     if torch.cuda.is_available():
-        torch.backends.cudnn.benchmark = True
         torch.cuda.synchronize()
 
     start_time = time.time()
@@ -111,18 +121,24 @@ def train(
         train_total = 0
 
         for batch_X, batch_y in train_loader:
-            batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+            batch_X = batch_X.to(device, non_blocking=use_cuda)
+            batch_y = batch_y.to(device, non_blocking=use_cuda)
 
             optimizer.zero_grad()
-            with torch.amp.autocast(device_type=device_type, enabled=use_cuda):
+            with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
                 outputs = model(batch_X)
                 loss = criterion(outputs, batch_y)
 
-            scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            scaler.step(optimizer)
-            scaler.update()
+            if scaler.is_enabled():
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
 
             train_loss += loss.item() * batch_X.size(0)
             _, preds = torch.max(outputs, 1)
@@ -140,8 +156,9 @@ def train(
 
         with torch.no_grad():
             for batch_X, batch_y in val_loader:
-                batch_X, batch_y = batch_X.to(device), batch_y.to(device)
-                with torch.amp.autocast(device_type=device_type, enabled=use_cuda):
+                batch_X = batch_X.to(device, non_blocking=use_cuda)
+                batch_y = batch_y.to(device, non_blocking=use_cuda)
+                with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
                     outputs = model(batch_X)
                     loss = criterion(outputs, batch_y)
 
@@ -186,7 +203,7 @@ def train(
 
 def evaluate_model(model, test_loader, criterion, device):
     """
-    Evaluates the model on the test dataset with Automatic Mixed Precision (AMP).
+    Evaluates the model on the test dataset with Automatic Mixed Precision (AMP) and CUDA acceleration.
     """
     model.eval()
     test_loss = 0.0
@@ -194,11 +211,13 @@ def evaluate_model(model, test_loader, criterion, device):
     test_total = 0
     use_cuda = device.type == "cuda"
     device_type = "cuda" if use_cuda else "cpu"
+    amp_dtype = torch.bfloat16 if (use_cuda and torch.cuda.is_bf16_supported()) else torch.float16
 
     with torch.no_grad():
         for batch_X, batch_y in test_loader:
-            batch_X, batch_y = batch_X.to(device), batch_y.to(device)
-            with torch.amp.autocast(device_type=device_type, enabled=use_cuda):
+            batch_X = batch_X.to(device, non_blocking=use_cuda)
+            batch_y = batch_y.to(device, non_blocking=use_cuda)
+            with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
                 outputs = model(batch_X)
                 loss = criterion(outputs, batch_y)
 
