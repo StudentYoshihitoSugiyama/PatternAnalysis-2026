@@ -16,10 +16,17 @@ Contains classes of the models and helper functions that will be used in other s
 ### predict.py
 
 Includes the testing pipeline to analyse models for performance in accuracy and speed.
+Flags:  
+
+- --model ("RN18", "GFNET")
+- --version ("BEST", "LATEST")
 
 ### train.py
 
-Includes the training pipeline to train and save models.
+Includes the training pipeline to train and save models.  
+Flags:  
+
+- --model ("RN18", "GFNET")
 
 ## Usage
 
@@ -32,7 +39,7 @@ Includes the training pipeline to train and save models.
 
 ### Instructions
 
-After installing the dependencies, run "train.py" with appropriate flags to train either a ResNet18 model or a GFNet model. Run "predict.py" to test a ResNet18 model or a GFNet model to analyse performance.
+After installing the dependencies within a python environment, run "train.py" with appropriate flags ("RN18" for ResNet18, "GFNET" for GFNet) to train either a ResNet18 model or a GFNet model. Run "predict.py" with appropriate flags ("RN18" for ResNet18, "GFNET" for GFNet, "BEST" for model with highest validation accuracy, "LATEST" for latest saved model)to test a ResNet18 model or a GFNet model to analyse performance.
 
 ## Introduction
 
