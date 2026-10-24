@@ -235,7 +235,12 @@ if __name__ == "__main__":
     train_loader, val_loader, test_loader = data_loaders()
 
     print("Constructing optimiser, scheduler, and criterion...")
-    optimiser = optim.AdamW(params=model.parameters(), lr=LR, weight_decay=WD)
+    if hasattr(model, "get_parameter_groups"):
+        param_groups = model.get_parameter_groups(weight_decay=WD)
+        optimiser = optim.AdamW(params=param_groups, lr=LR)
+    else:
+        optimiser = optim.AdamW(params=model.parameters(), lr=LR, weight_decay=WD)
+
     warmup_scheduler = optim.lr_scheduler.LinearLR(
         optimiser, start_factor=0.01, end_factor=1.0, total_iters=WARMUP_EPOCHS
     )
