@@ -58,6 +58,9 @@ def data_preprocess():
             fill=0
         ),
         transforms.ColorJitter(brightness=0.5, contrast=0.15),
+        transforms.RandomApply([
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.2))
+        ], p=0.2),
         transforms.ToTensor(),
         transforms.Normalize(mean=NORM_MEAN, std=NORM_STD)
     ])
