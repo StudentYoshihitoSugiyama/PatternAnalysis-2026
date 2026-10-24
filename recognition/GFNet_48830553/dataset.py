@@ -48,7 +48,7 @@ def data_preprocess():
         tuple: (train_transform, eval_transform)
     """
     train_transform = transforms.Compose([
-        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
+        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE), interpolation=transforms.InterpolationMode.BILINEAR),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomAffine(degrees=10, translate=(0.04, 0.04), scale=(0.96, 1.04)),
         transforms.ColorJitter(brightness=0.4, contrast=0.15),
@@ -57,7 +57,7 @@ def data_preprocess():
     ])
 
     eval_transform = transforms.Compose([
-        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
+        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE), interpolation=transforms.InterpolationMode.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(mean=NORM_MEAN, std=NORM_STD)
     ])
