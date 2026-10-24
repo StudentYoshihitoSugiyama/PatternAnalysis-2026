@@ -13,11 +13,11 @@ PATH_BEST_MODEL = "Models/best"
 
 # Hyperparameters
 EPOCHS = 150
-WARMUP_EPOCHS = 5
-PATIENCE = 25
+WARMUP_EPOCHS = 10
+PATIENCE = 40
 ETA_MIN = 1e-6
-LR = 0.001
-WD = 0.001
+LR = 0.0003
+WD = 0.05
 
 class EarlyStopping:
     """
