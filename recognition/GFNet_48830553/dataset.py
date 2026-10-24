@@ -1,5 +1,6 @@
 import os
 import random
+import torch
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
@@ -10,7 +11,7 @@ DATA_TRAIN_PATH = "/home/groups/comp3710/ADNI/AD_NC/train/"
 # Hyperparameters and Configuration
 IMAGE_SIZE = 256
 BATCH_SIZE = 64
-NUM_WORKERS = 1
+NUM_WORKERS = 4
 SPLIT_RATIO = 0.8
 SEED = 42
 NORM_MEAN = [0.5]
@@ -150,9 +151,10 @@ def _load_test_samples(test_dir=DATA_TEST_PATH):
     return test_samples
 
 
-def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, split_ratio=SPLIT_RATIO, seed=SEED):
+def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, split_ratio=SPLIT_RATIO, seed=SEED, pin_memory=True):
     """
     Creates and returns PyTorch DataLoaders for training, validation, and testing.
+    Configured with pin_memory and persistent_workers for accelerated CUDA data transfer.
 
     Args:
         train_dir (str): Directory containing training 'AD' and 'NC' subdirectories.
@@ -161,6 +163,7 @@ def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=
         num_workers (int): Number of worker threads for DataLoader.
         split_ratio (float): Patient split ratio for training data (default: 0.8).
         seed (int): Seed for patient splitting.
+        pin_memory (bool): Whether to pin memory for fast CUDA host-to-device transfers.
 
     Returns:
         tuple: (train_loader, val_loader, test_loader)
@@ -173,8 +176,32 @@ def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=
     val_dataset = ADNIDataset(val_samples, transform=eval_transform)
     test_dataset = ADNIDataset(test_samples, transform=eval_transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    use_pin_memory = pin_memory and torch.cuda.is_available()
+    use_persistent = num_workers > 0
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=use_pin_memory,
+        persistent_workers=use_persistent
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=use_pin_memory,
+        persistent_workers=use_persistent
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=use_pin_memory,
+        persistent_workers=use_persistent
+    )
 
     return train_loader, val_loader, test_loader
