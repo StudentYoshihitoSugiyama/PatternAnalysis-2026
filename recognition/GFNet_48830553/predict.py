@@ -10,25 +10,49 @@ import matplotlib.pyplot as plt
 
 
 def fast_evaluate_model(model, test_loader, device):
+    """
+    Computes total inference latency across the test dataset with CUDA acceleration.
+    """
     model.eval()
+    use_cuda = device.type == "cuda"
+    device_type = "cuda" if use_cuda else "cpu"
+    amp_dtype = torch.bfloat16 if (use_cuda and torch.cuda.is_bf16_supported()) else torch.float16
+
+    if use_cuda:
+        torch.cuda.synchronize()
     start_time = time.time()
     with torch.no_grad():
         for batch_X, batch_y in test_loader:
-            batch_X, batch_y = batch_X.to(device), batch_y.to(device)
-            outputs = model(batch_X)
-            _, _ = torch.max(outputs, 1)
+            batch_X = batch_X.to(device, non_blocking=use_cuda)
+            batch_y = batch_y.to(device, non_blocking=use_cuda)
+            with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
+                outputs = model(batch_X)
+                _, _ = torch.max(outputs, 1)
+    if use_cuda:
+        torch.cuda.synchronize()
     end_time = time.time()
     total_time = end_time - start_time
     return total_time
 
 def evaluate_model(model, test_loader, device, output_path):
     """
-    Evaluates the model on the test dataset
+    Evaluates the model on the test dataset with CUDA and mixed-precision acceleration.
     """
     precision_metric = BinaryPrecision(device=device)
     recall_metric = BinaryRecall(device=device)
     confusion_matrix_metric = BinaryConfusionMatrix(device=device)
     accuracy_metric = BinaryAccuracy(device=device)
+
+    use_cuda = device.type == "cuda"
+    device_type = "cuda" if use_cuda else "cpu"
+    amp_dtype = torch.bfloat16 if (use_cuda and torch.cuda.is_bf16_supported()) else torch.float16
+
+    if use_cuda:
+        torch.backends.cudnn.benchmark = True
+        if hasattr(torch.backends.cuda.matmul, "allow_tf32"):
+            torch.backends.cuda.matmul.allow_tf32 = True
+        if hasattr(torch.backends.cudnn, "allow_tf32"):
+            torch.backends.cudnn.allow_tf32 = True
 
     model.eval()
     test_correct = 0
@@ -41,8 +65,10 @@ def evaluate_model(model, test_loader, device, output_path):
 
     with torch.no_grad():
         for batch_X, batch_y in test_loader:
-            batch_X, batch_y = batch_X.to(device), batch_y.to(device)
-            outputs = model(batch_X)
+            batch_X = batch_X.to(device, non_blocking=use_cuda)
+            batch_y = batch_y.to(device, non_blocking=use_cuda)
+            with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
+                outputs = model(batch_X)
 
             probs = torch.softmax(outputs, dim=1)
             max_probs, preds = torch.max(probs, 1)
