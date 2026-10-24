@@ -41,7 +41,7 @@ def data_preprocess():
     """
     Defines image transformations and normalisation pipelines.
     Includes data augmentations for the training set (horizontal flip, 
-    affine rotation/translation/scale, and intensity jitter) to improve 
+    affine rotation/translation/scale, intensity jitter, Gaussian blur, and random erasing) to improve 
     model generalisation on 2D MRI scans.
     
     Returns:
@@ -62,7 +62,8 @@ def data_preprocess():
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.2))
         ], p=0.2),
         transforms.ToTensor(),
-        transforms.Normalize(mean=NORM_MEAN, std=NORM_STD)
+        transforms.Normalize(mean=NORM_MEAN, std=NORM_STD),
+        transforms.RandomErasing(p=0.25, scale=(0.02, 0.15), value=0)
     ])
 
     eval_transform = transforms.Compose([
