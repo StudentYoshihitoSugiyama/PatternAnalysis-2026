@@ -29,15 +29,20 @@ class EarlyStopping:
         self.min_delta = min_delta
         self.verbose = verbose
         self.counter = 0
+        self.best_acc = -1.0
         self.best_loss = torch.inf
         self.early_stop = False
         self.best_weights = None
         self.best_epoch = 0
 
-    def __call__(self, val_loss, model, epoch):
-        if val_loss < self.best_loss - self.min_delta:
+    def __call__(self, val_acc, val_loss, model, epoch):
+        improved = (val_acc > self.best_acc + self.min_delta) or (
+            abs(val_acc - self.best_acc) <= self.min_delta and val_loss < self.best_loss
+        )
+        if improved:
             if self.verbose:
-                print(f" -> Validation loss improved from {self.best_loss:.4f} to {val_loss:.4f}. Stashing best weights.")
+                print(f" -> Validation metric improved (Acc: {self.best_acc:.4f} -> {val_acc:.4f}, Loss: {self.best_loss:.4f} -> {val_loss:.4f}). Stashing best weights.")
+            self.best_acc = val_acc
             self.best_loss = val_loss
             self.best_weights = copy.deepcopy(model.state_dict())
             self.best_epoch = epoch
@@ -77,7 +82,8 @@ def train(
     val_loader
 ):
     """
-    Trains the provided model on the ADNI dataset with Automatic Mixed Precision (AMP).
+    Trains the provided model on the ADNI dataset with Automatic Mixed Precision (AMP),
+    gradient clipping, and early stopping.
     """
     print(f"\nBeginning training on device '{device}' for {EPOCHS} epochs...")
 
@@ -158,7 +164,7 @@ def train(
 
         # Check Early Stopping
         if early_stopping is not None:
-            early_stopping(epoch_val_loss, model, epoch)
+            early_stopping(epoch_val_acc, epoch_val_loss, model, epoch)
             if early_stopping.early_stop:
                 print(f"\nEarly stopping triggered at epoch {epoch}. Stopping training early.")
                 break
