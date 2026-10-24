@@ -58,16 +58,41 @@ Firstly, data processing and loading functions are created in the "dataset.py" f
 
 ### Problems
 
-- Memory: Reduced batch size to reduce overall memory usage in each batch to fit Nvidia A100
-- Epoch: Initial max epoch was small (5) to check for feasibility, but was increased once feasibility was checked
-- Hours: After initial run, estimated training time was reduced in batch files
-- Weight Decay: Weight decay prevented learning in some parameters and was changed to be selective on which parameters to have weight decay
-- Drop Paths: Added drop paths to improve ResNet18 and GFNet
-- Data Augmentation: Added data augmentation (Jitter, Flips, Affine, Erasing, and Gaussian Blur)to improve accuracy
-- Learning Rate: Adjusted learning rate to allow warming up for improved accuracy
-- Initial Values: Adjusting initial values of parameters for faster and stable convergence
-- Patch Size: Reduce patch size for finer and granular patching to improve local feature extraction
-- Training Time: Integrated CUDA and A100 related code to improve training time by utilising specific hardware
+#### Memory
+
+Due to the memory restriction of a singular Nvidia A100, the max batch size had to be reduced.
+
+#### Epoch
+
+The initial max epoch was set to a small number (5) to determine feasibility, but was increased (150) one feasibility was validated.
+
+#### Weight Decay
+
+Weight decay is important to control overfitting; however, too much weight decay caused the model to not learn and was adjusted accordingly.
+
+#### Droppaths
+
+To improve regularisation and decrease overfitting, droppaths were introduced. Dropout and droppaths both improve regularisation, but dropout deactivates specific neurons while droppaths deactivates entire layer/blocks.
+
+#### Data Augmentation
+
+Data augmenation in the form of jitter, flips, affine transformation, erasing, and guassian blur are introduced to increase the effective training set with variation to reduce overfitting.
+
+#### Learning rate
+
+Learning rate was adjusted to a small number with warm up to allow smoother learning with smaller chance to overshoot minimas.
+
+#### Initial values
+
+Initial values of parameters were adjusted for faster and stable convergence.
+
+#### Patch size
+
+Reduced patch size of the GFNet for finer and granular patching to improve local feature extraction
+
+#### CUDA and Hardware
+
+CUDA and Nvidia A100 related code are implemented to imporve training time by utilising the specific hardware capabilities
 
 ### Results
 
