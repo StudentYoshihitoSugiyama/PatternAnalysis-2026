@@ -80,7 +80,10 @@ def train(
     scheduler,
     device, 
     train_loader, 
-    val_loader
+    val_loader,
+    latest_path=None,
+    best_path=None,
+    best_val_accuracy=-1.0
 ):
     """
     Trains the provided model on the ADNI dataset with Automatic Mixed Precision (AMP),
@@ -183,6 +186,38 @@ def train(
               f"Train Loss: {epoch_train_loss:.4f}, Train Acc: {epoch_train_acc:.4f} | "
               f"Val Loss: {epoch_val_loss:.4f}, Val Acc: {epoch_val_acc:.4f}")
 
+        # Save latest model at each epoch
+        if latest_path is not None:
+            current_time = time.time() - start_time
+            latest_information = consolidate_information(
+                model=model,
+                val_accuracy=epoch_val_acc,
+                criterion=criterion,
+                optimiser=optimizer,
+                scheduler=scheduler,
+                device=device,
+                training_time=current_time,
+                losses=(train_losses, val_losses, epochs)
+            )
+            save_checkpoint(path=latest_path, model=model, information=latest_information)
+
+        # Update best model immediately if validation accuracy improves
+        if best_path is not None and epoch_val_acc > best_val_accuracy:
+            print(f" -> Validation accuracy improved ({best_val_accuracy:.4f} -> {epoch_val_acc:.4f}). Saving best model to '{best_path}'.")
+            best_val_accuracy = epoch_val_acc
+            current_time = time.time() - start_time
+            best_information = consolidate_information(
+                model=model,
+                val_accuracy=epoch_val_acc,
+                criterion=criterion,
+                optimiser=optimizer,
+                scheduler=scheduler,
+                device=device,
+                training_time=current_time,
+                losses=(train_losses, val_losses, epochs)
+            )
+            save_checkpoint(path=best_path, model=model, information=best_information)
+
         # Check Early Stopping
         if early_stopping is not None:
             early_stopping(epoch_val_acc, epoch_val_loss, model, epoch)
@@ -201,41 +236,13 @@ def train(
     print(f"Total Training Time: {total_training_time:.2f} seconds ({total_training_time / 60:.2f} minutes)")
     return model, total_training_time, (train_losses, val_losses, epochs)
 
-def evaluate_model(model, test_loader, criterion, device):
-    """
-    Evaluates the model on the test dataset with Automatic Mixed Precision (AMP) and CUDA acceleration.
-    """
-    model.eval()
-    test_loss = 0.0
-    test_correct = 0
-    test_total = 0
-    use_cuda = device.type == "cuda"
-    device_type = "cuda" if use_cuda else "cpu"
-    amp_dtype = torch.bfloat16 if (use_cuda and torch.cuda.is_bf16_supported()) else torch.float16
-
-    with torch.no_grad():
-        for batch_X, batch_y in test_loader:
-            batch_X = batch_X.to(device, non_blocking=use_cuda)
-            batch_y = batch_y.to(device, non_blocking=use_cuda)
-            with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
-                outputs = model(batch_X)
-                loss = criterion(outputs, batch_y)
-
-            test_loss += loss.item() * batch_X.size(0)
-            _, preds = torch.max(outputs, 1)
-            test_correct += (preds == batch_y).sum().item()
-            test_total += batch_y.size(0)
-
-    test_accuracy = test_correct / test_total
-    return test_accuracy
-
-def consolidate_information(model, test_accuracy, criterion, optimiser, scheduler, device, training_time, losses):
+def consolidate_information(model, val_accuracy, criterion, optimiser, scheduler, device, training_time, losses):
     information = {
         "model": str(model),
         "epochs": EPOCHS,
         "criterion": f"Cross-Entropy: (weight: {WEIGHT}), (label smoothing: {LABEL_SMOOTHING})",
         "optimiser": "ADAMW: " + str(optimiser.state_dict()["param_groups"]),
-        "test_accuracy": test_accuracy,
+        "val_accuracy": val_accuracy,
         "scheduler": f"Linear Warmup ({WARMUP_EPOCHS} epochs) + Cosine Annealing (T_max: {max(EPOCHS - WARMUP_EPOCHS, 1)}, eta_min: {ETA_MIN})",
         "device": str(device),
         "training_time": training_time,
@@ -261,7 +268,7 @@ if __name__ == "__main__":
     best_path = PATH_BEST_MODEL + "_" + str(mode) + ".pt"
 
     print("Constructing data loaders...")
-    train_loader, val_loader, test_loader = data_loaders()
+    train_loader, val_loader, _ = data_loaders()
 
     print("Constructing optimiser, scheduler, and criterion...")
     if hasattr(model, "get_parameter_groups"):
@@ -284,27 +291,25 @@ if __name__ == "__main__":
     print("Obtaining device...")
     device = get_device()
     model.to(device=device)
-    
-    trained_model, training_time, losses = train(model=model, criterion=criterion, optimizer=optimiser, scheduler=scheduler,
-            device=device, train_loader=train_loader, val_loader=val_loader)
-    current_model_accuracy = evaluate_model(model=model, test_loader=test_loader, criterion=criterion, device=device)
-    
-    information = consolidate_information(
-        model=trained_model, test_accuracy=current_model_accuracy, 
-        criterion=criterion, optimiser=optimiser,
-        scheduler=scheduler, device=device, training_time=training_time, losses=losses)
-    
-    save_checkpoint(path=latest_path, model=trained_model, information=information)
+
     best_model_info = load_checkpoint(best_path, device=device)
-    if best_model_info != None:
-        best_model_accuracy = float(best_model_info.get("information", dict()).get("test_accuracy", -1.0))
-        
-    if best_model_info == None:
-        print(f"Current model ({current_model_accuracy:.4f})")
-        print("No best model found. Automatically saving as best.")
-        save_checkpoint(path=best_path, model=trained_model, information=information)
-    elif best_model_accuracy < current_model_accuracy:
-        print(f"Current model ({current_model_accuracy:.4f}) did beat best model ({best_model_accuracy:.4f}).")
-        save_checkpoint(path=best_path, model=trained_model, information=information)
+    if best_model_info is not None:
+        best_model_accuracy = float(best_model_info.get("information", dict()).get("val_accuracy", -1.0))
+        print(f"Existing best model found with validation accuracy: {best_model_accuracy:.4f}.")
     else:
-        print(f"Current model ({current_model_accuracy:.4f}) did not beat best model ({best_model_accuracy:.4f}).")
+        best_model_accuracy = -1.0
+        print("No existing best model found.")
+
+    trained_model, training_time, losses = train(
+        model=model,
+        criterion=criterion,
+        optimizer=optimiser,
+        scheduler=scheduler,
+        device=device,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        latest_path=latest_path,
+        best_path=best_path,
+        best_val_accuracy=best_model_accuracy
+    )
+    print("Training run completed. Latest and best models have been saved.")
