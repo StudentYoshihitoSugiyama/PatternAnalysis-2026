@@ -158,7 +158,7 @@ def _load_test_samples(test_dir=DATA_TEST_PATH):
 def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, split_ratio=SPLIT_RATIO, seed=SEED, pin_memory=True):
     """
     Creates and returns PyTorch DataLoaders for training, validation, and testing.
-    Configured with pin_memory and persistent_workers for accelerated CUDA data transfer.
+    Configured with pin_memory, persistent_workers, and prefetch_factor for accelerated CUDA data transfer.
 
     Args:
         train_dir (str): Directory containing training 'AD' and 'NC' subdirectories.
@@ -183,29 +183,17 @@ def data_loaders(train_dir=DATA_TRAIN_PATH, test_dir=DATA_TEST_PATH, batch_size=
     use_pin_memory = pin_memory and torch.cuda.is_available()
     use_persistent = num_workers > 0
 
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=num_workers,
-        pin_memory=use_pin_memory,
-        persistent_workers=use_persistent
-    )
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=use_pin_memory,
-        persistent_workers=use_persistent
-    )
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=use_pin_memory,
-        persistent_workers=use_persistent
-    )
+    loader_kwargs = {
+        "batch_size": batch_size,
+        "num_workers": num_workers,
+        "pin_memory": use_pin_memory,
+        "persistent_workers": use_persistent,
+    }
+    if num_workers > 0:
+        loader_kwargs["prefetch_factor"] = 2
+
+    train_loader = DataLoader(train_dataset, shuffle=True, **loader_kwargs)
+    val_loader = DataLoader(val_dataset, shuffle=False, **loader_kwargs)
+    test_loader = DataLoader(test_dataset, shuffle=False, **loader_kwargs)
 
     return train_loader, val_loader, test_loader
