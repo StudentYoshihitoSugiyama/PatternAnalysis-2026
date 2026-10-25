@@ -12,7 +12,7 @@ PATH_LATEST_MODEL = "Models/latest"
 PATH_BEST_MODEL = "Models/best"
 
 # Hyperparameters
-EPOCHS = 150
+EPOCHS = 250
 WARMUP_EPOCHS = 10
 PATIENCE = 40
 ETA_MIN = 1e-6
