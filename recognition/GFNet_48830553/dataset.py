@@ -41,9 +41,11 @@ class ADNIDataset(Dataset):
 def data_preprocess():
     """
     Defines image transformations and normalisation pipelines.
-    Includes data augmentations for the training set (horizontal flip, 
-    affine rotation/translation/scale, intensity jitter, Gaussian blur, and random erasing) to improve 
-    model generalisation on 2D MRI scans.
+    Calibrated for 2D brain MRI scans and GFNet Fourier domain requirements:
+    - Moderate brightness/contrast jitter (0.15) to preserve tissue contrast boundaries.
+    - Random erasing filled with background air value (-1.0 in [-1, 1] normalized space)
+      to avoid injecting high-contrast artificial gray steps into the 2D FFT spectrum.
+    - Mild random affine and Gaussian blur for spatial regularisation.
     
     Returns:
         tuple: (train_transform, eval_transform)
@@ -58,13 +60,13 @@ def data_preprocess():
             interpolation=transforms.InterpolationMode.BILINEAR,
             fill=0
         ),
-        transforms.ColorJitter(brightness=0.5, contrast=0.15),
+        transforms.ColorJitter(brightness=0.2, contrast=0.15),
         transforms.RandomApply([
-            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.2))
-        ], p=0.2),
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))
+        ], p=0.15),
         transforms.ToTensor(),
         transforms.Normalize(mean=NORM_MEAN, std=NORM_STD),
-        transforms.RandomErasing(p=0.25, scale=(0.02, 0.15), value=0)
+        transforms.RandomErasing(p=0.15, scale=(0.02, 0.10), value=-1.0)
     ])
 
     eval_transform = transforms.Compose([
