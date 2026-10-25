@@ -36,7 +36,7 @@ def fast_evaluate_model(model, test_loader, device):
 
 def evaluate_model(model, test_loader, device, output_path):
     """
-    Evaluates the model on the test dataset with CUDA and mixed-precision acceleration.
+    Evaluates the model on the test dataset with CUDA acceleration and sample-accurate confidence averaging.
     """
     precision_metric = BinaryPrecision(device=device)
     recall_metric = BinaryRecall(device=device)
@@ -57,11 +57,16 @@ def evaluate_model(model, test_loader, device, output_path):
     model.eval()
     test_correct = 0
     test_total = 0
-    acc_tp_conf = 0.0
-    acc_tn_conf = 0.0
-    acc_fp_conf = 0.0
-    acc_fn_conf = 0.0
-    batch_count = 0
+
+    sum_tp_conf = 0.0
+    sum_tn_conf = 0.0
+    sum_fp_conf = 0.0
+    sum_fn_conf = 0.0
+
+    count_tp = 0
+    count_tn = 0
+    count_fp = 0
+    count_fn = 0
 
     with torch.no_grad():
         for batch_X, batch_y in test_loader:
@@ -84,27 +89,34 @@ def evaluate_model(model, test_loader, device, output_path):
             fp_mask = (preds == 1) & (batch_y == 0)  # False Positive
             fn_mask = (preds == 0) & (batch_y == 1)  # False Negative
 
-            # 3. Calculate average probabilities (with checks to avoid NaN if a batch lacks a category)
-            avg_tp_conf = max_probs[tp_mask].mean().item() if tp_mask.any() else 0.0
-            avg_fp_conf = max_probs[fp_mask].mean().item() if fp_mask.any() else 0.0
-            avg_fn_conf = max_probs[fn_mask].mean().item() if fn_mask.any() else 0.0
-            avg_tn_conf = max_probs[tn_mask].mean().item() if tn_mask.any() else 0.0
-
-            acc_tp_conf += avg_tp_conf
-            acc_tn_conf += avg_tn_conf
-            acc_fp_conf += avg_fp_conf
-            acc_fn_conf += avg_fn_conf
-            batch_count += 1
+            # 3. Accumulate sum of probabilities and counts per category across all samples
+            if tp_mask.any():
+                sum_tp_conf += max_probs[tp_mask].sum().item()
+                count_tp += tp_mask.sum().item()
+            if tn_mask.any():
+                sum_tn_conf += max_probs[tn_mask].sum().item()
+                count_tn += tn_mask.sum().item()
+            if fp_mask.any():
+                sum_fp_conf += max_probs[fp_mask].sum().item()
+                count_fp += fp_mask.sum().item()
+            if fn_mask.any():
+                sum_fn_conf += max_probs[fn_mask].sum().item()
+                count_fn += fn_mask.sum().item()
 
             test_correct += (preds == batch_y).sum().item()
             test_total += batch_y.size(0)
 
-    total_avg_tp_conf = acc_tp_conf / batch_count
-    total_avg_tn_conf = acc_tn_conf/ batch_count
-    total_avg_fp_conf = acc_fp_conf / batch_count
-    total_avg_fn_conf = acc_fn_conf / batch_count
-    total_true_conf = (total_avg_tp_conf + total_avg_tn_conf) / 2.0
-    total_false_conf = (total_avg_fp_conf + total_avg_fn_conf) / 2.0
+    # Compute global sample-level average confidences without zero-batch dilution
+    total_avg_tp_conf = sum_tp_conf / count_tp if count_tp > 0 else 0.0
+    total_avg_tn_conf = sum_tn_conf / count_tn if count_tn > 0 else 0.0
+    total_avg_fp_conf = sum_fp_conf / count_fp if count_fp > 0 else 0.0
+    total_avg_fn_conf = sum_fn_conf / count_fn if count_fn > 0 else 0.0
+
+    total_true_count = count_tp + count_tn
+    total_true_conf = (sum_tp_conf + sum_tn_conf) / total_true_count if total_true_count > 0 else 0.0
+
+    total_false_count = count_fp + count_fn
+    total_false_conf = (sum_fp_conf + sum_fn_conf) / total_false_count if total_false_count > 0 else 0.0
 
     precision = precision_metric.compute()
     recall = recall_metric.compute()
