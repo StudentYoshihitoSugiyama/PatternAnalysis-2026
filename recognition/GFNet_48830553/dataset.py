@@ -82,6 +82,7 @@ def data_split(train_dir=DATA_TRAIN_PATH, split_ratio=0.8, seed=42):
     """
     Splits images in the training directory into training and validation sets
     at the patient level to prevent data leakage.
+    Splits filenames from the right to safely handle patient IDs containing underscores.
 
     Label mapping:
         AD -> 1
@@ -109,7 +110,8 @@ def data_split(train_dir=DATA_TRAIN_PATH, split_ratio=0.8, seed=42):
         for fname in os.listdir(class_dir):
             if fname.lower().endswith((".jpeg", ".jpg")):
                 # File naming convention: <patient_id>_<slice_number>.jpeg
-                patient_id = fname.split("_")[0]
+                name_without_ext = os.path.splitext(fname)[0]
+                patient_id = name_without_ext.rsplit("_", 1)[0]
                 img_path = os.path.join(class_dir, fname)
                 patient_to_images.setdefault(patient_id, []).append((img_path, label))
 
