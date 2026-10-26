@@ -75,7 +75,7 @@ The initial max epoch was set to a small number (5) to determine feasibility, bu
 
 #### Weight Decay
 
-Weight decay is important to control overfitting; however, too much weight decay caused the model to not learn and was adjusted accordingly.
+Weight decay is important to control overfitting; however, too much weight decay caused the model to not learn and was adjusted accordingly. Not all parameters such as positional embedding, bias, LayerNorm, and LayerScale required weight decay as those parameters were not capturing complex features and was removed from decay.
 
 #### Droppaths
 
@@ -83,7 +83,7 @@ To improve regularisation and decrease overfitting, droppaths were introduced. D
 
 #### Data Augmentation
 
-Data augmenation in the form of jitter, flips, affine transformation, erasing, and guassian blur are introduced to increase the effective training set with variation to reduce overfitting.
+Data augmenation in the form of jitter, flips, affine transformation, erasing, and guassian blur are introduced to increase the effective training set with variation to reduce overfitting. With further investigation, random erasing is suspected to introduce too much variation and decreased performance of the model and was removed.
 
 #### Learning rate
 
