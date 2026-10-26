@@ -43,8 +43,9 @@ def data_preprocess():
     Defines image transformations and normalisation pipelines.
     Calibrated for 2D brain MRI scans and GFNet Fourier domain requirements:
     - Moderate brightness/contrast jitter (0.15) to preserve tissue contrast boundaries.
-    - Random erasing filled with background air value (-1.0 in [-1, 1] normalized space)
-      to avoid injecting high-contrast artificial gray steps into the 2D FFT spectrum.
+    - Removed RandomErasing: rectangular cutouts inject sharp step discontinuities
+      that create high-frequency sinc harmonics across the 2D FFT spectrum, causing
+      GFNet to overfit in the frequency domain and trigger massive validation loss spikes.
     - Mild random affine and Gaussian blur for spatial regularisation.
     
     Returns:
@@ -66,7 +67,6 @@ def data_preprocess():
         ], p=0.15),
         transforms.ToTensor(),
         transforms.Normalize(mean=NORM_MEAN, std=NORM_STD),
-        transforms.RandomErasing(p=0.15, scale=(0.02, 0.10), value=-1.0)
     ])
 
     eval_transform = transforms.Compose([
