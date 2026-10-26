@@ -15,7 +15,7 @@ Contains classes of the models and helper functions that will be used in other s
 
 ### predict.py
 
-Includes the testing pipeline to analyse models for performance in accuracy and speed.
+Includes the testing pipeline to analyse models for performance in accuracy and speed.  
 Flags:  
 
 - --model ("RN18", "GFNET")
