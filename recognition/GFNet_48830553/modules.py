@@ -9,7 +9,7 @@ IMG_SIZE = 256
 IN_CHANS = 1          # Greyscale images
 NUM_CLASSES = 2       # NC (0) vs AD (1)
 WEIGHT = None         # Uniform class weights or balanced tensor
-LABEL_SMOOTHING = 0.05 # Mild label smoothing to mitigate overconfidence on MRI slice boundaries
+LABEL_SMOOTHING = 0.10 # Increased label smoothing (0.10) to strictly bound maximum cross-entropy penalties on ambiguous MRI slices and prevent validation loss spikes
 
 # ==========================================
 # ResNet-18 Hyperparameters (Default Configuration)
@@ -17,6 +17,7 @@ LABEL_SMOOTHING = 0.05 # Mild label smoothing to mitigate overconfidence on MRI 
 RESNET18_DROPOUT_RATE = 0.2     # Regularisation before classification head (tuned for 2D MRI)
 RESNET18_DROP_PATH_RATE = 0.05  # Stochastic depth across residual blocks
 RESNET18_SE_REDUCTION = 8       # SE attention reduction ratio (8 preserves more fine-grained channel variance)
+RESNET18_BN_MOMENTUM = 0.05     # Smoother running statistics tracking across heterogeneous MRI slice batches
 
 # ==========================================
 # GFNet Hyperparameters (Optimized Configuration)
@@ -28,7 +29,7 @@ MLP_RATIO = 4.0       # MLP expansion ratio
 DROPOUT_RATE = 0.1    # Dropout probability across MLP and positional embeddings
 DROP_PATH_RATE = 0.1  # Stochastic depth rate across GFNet blocks to prevent overfitting
 HEAD_DROPOUT_RATE = 0.2 # Dropout probability before the classification head
-INIT_VALUES = 1e-1    # LayerScale initial value (calibrated to 0.1 for shallow 6-layer GFNet to prevent signal attenuation and enable gradient flow)
+INIT_VALUES = 1e-4    # LayerScale initial value calibrated to 1e-4 to start near identity and prevent variance explosion across layers
 
 
 
@@ -81,13 +82,13 @@ class SqueezeExcitation(nn.Module):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_planes, planes, stride=1, drop_path_rate=0.0, reduction=RESNET18_SE_REDUCTION):
+    def __init__(self, in_planes, planes, stride=1, drop_path_rate=0.0, reduction=RESNET18_SE_REDUCTION, bn_momentum=RESNET18_BN_MOMENTUM):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(planes)
+        self.bn1 = nn.BatchNorm2d(planes, momentum=bn_momentum)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
+        self.bn2 = nn.BatchNorm2d(planes, momentum=bn_momentum)
         self.se = SqueezeExcitation(planes, reduction=reduction)
         self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
 
@@ -98,12 +99,12 @@ class BasicBlock(nn.Module):
                 self.shortcut = nn.Sequential(
                     nn.AvgPool2d(kernel_size=stride, stride=stride, ceil_mode=True, count_include_pad=False),
                     nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=1, bias=False),
-                    nn.BatchNorm2d(self.expansion * planes)
+                    nn.BatchNorm2d(self.expansion * planes, momentum=bn_momentum)
                 )
             else:
                 self.shortcut = nn.Sequential(
                     nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=1, bias=False),
-                    nn.BatchNorm2d(self.expansion * planes)
+                    nn.BatchNorm2d(self.expansion * planes, momentum=bn_momentum)
                 )
 
     def forward(self, x):
@@ -131,13 +132,14 @@ class ResNet18(nn.Module):
     - Parameter grouping method (get_parameter_groups) for weight decay decoupling.
     """
     def __init__(self, num_classes=NUM_CLASSES, dropout_rate=RESNET18_DROPOUT_RATE,
-                 drop_path_rate=RESNET18_DROP_PATH_RATE, se_reduction=RESNET18_SE_REDUCTION):
+                 drop_path_rate=RESNET18_DROP_PATH_RATE, se_reduction=RESNET18_SE_REDUCTION,
+                 bn_momentum=RESNET18_BN_MOMENTUM):
         super(ResNet18, self).__init__()
         self.in_planes = 64
 
         # Downsample 256x256 -> 128x128 -> 64x64
         self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
+        self.bn1 = nn.BatchNorm2d(64, momentum=bn_momentum)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -145,10 +147,10 @@ class ResNet18(nn.Module):
         total_blocks = 8
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, total_blocks)]
 
-        self.layer1 = self._make_layer(BasicBlock, 64, 2, stride=1, dpr=dpr[0:2], reduction=se_reduction)
-        self.layer2 = self._make_layer(BasicBlock, 128, 2, stride=2, dpr=dpr[2:4], reduction=se_reduction)
-        self.layer3 = self._make_layer(BasicBlock, 256, 2, stride=2, dpr=dpr[4:6], reduction=se_reduction)
-        self.layer4 = self._make_layer(BasicBlock, 512, 2, stride=2, dpr=dpr[6:8], reduction=se_reduction)
+        self.layer1 = self._make_layer(BasicBlock, 64, 2, stride=1, dpr=dpr[0:2], reduction=se_reduction, bn_momentum=bn_momentum)
+        self.layer2 = self._make_layer(BasicBlock, 128, 2, stride=2, dpr=dpr[2:4], reduction=se_reduction, bn_momentum=bn_momentum)
+        self.layer3 = self._make_layer(BasicBlock, 256, 2, stride=2, dpr=dpr[4:6], reduction=se_reduction, bn_momentum=bn_momentum)
+        self.layer4 = self._make_layer(BasicBlock, 512, 2, stride=2, dpr=dpr[6:8], reduction=se_reduction, bn_momentum=bn_momentum)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate > 0 else nn.Identity()
@@ -169,11 +171,11 @@ class ResNet18(nn.Module):
             if isinstance(m, BasicBlock):
                 nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, num_blocks, stride, dpr, reduction=RESNET18_SE_REDUCTION):
+    def _make_layer(self, block, planes, num_blocks, stride, dpr, reduction=RESNET18_SE_REDUCTION, bn_momentum=RESNET18_BN_MOMENTUM):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for i, s in enumerate(strides):
-            layers.append(block(self.in_planes, planes, stride=s, drop_path_rate=dpr[i], reduction=reduction))
+            layers.append(block(self.in_planes, planes, stride=s, drop_path_rate=dpr[i], reduction=reduction, bn_momentum=bn_momentum))
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
