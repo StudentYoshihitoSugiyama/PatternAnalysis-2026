@@ -60,7 +60,7 @@ def data_preprocess():
             interpolation=transforms.InterpolationMode.BILINEAR,
             fill=0
         ),
-        transforms.ColorJitter(brightness=0.2, contrast=0.15),
+        transforms.ColorJitter(brightness=0.15, contrast=0.15),
         transforms.RandomApply([
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))
         ], p=0.15),
