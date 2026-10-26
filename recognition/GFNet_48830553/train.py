@@ -16,8 +16,28 @@ EPOCHS = 250
 WARMUP_EPOCHS = 10
 PATIENCE = 40
 ETA_MIN = 1e-6
-LR = 0.0003
+LR = 0.0002           # Stabilized learning rate to prevent optimizer overshoot and loss volatility
 WD = 0.05
+EMA_DECAY = 0.995     # Exponential moving average decay to smooth validation loss and enhance test generalization
+
+class ModelEMA:
+    """
+    Exponential Moving Average (EMA) of model weights.
+    Maintains smooth parameter trajectories to eliminate high-variance validation loss spikes
+    and improve generalization on the test dataset.
+    """
+    def __init__(self, model, decay=EMA_DECAY):
+        self.decay = decay
+        self.ema_model = copy.deepcopy(model).eval()
+        for p in self.ema_model.parameters():
+            p.requires_grad_(False)
+
+    def update(self, model):
+        with torch.no_grad():
+            for ema_param, param in zip(self.ema_model.parameters(), model.parameters()):
+                ema_param.data.mul_(self.decay).add_(param.data, alpha=1.0 - self.decay)
+            for ema_buf, buf in zip(self.ema_model.buffers(), model.buffers()):
+                ema_buf.copy_(buf)
 
 class EarlyStopping:
     """
@@ -92,8 +112,10 @@ def train(
     print(f"\nBeginning training on device '{device}' for {EPOCHS} epochs...")
 
     early_stopping = EarlyStopping(patience=PATIENCE)
+    ema = ModelEMA(model, decay=EMA_DECAY)
     use_cuda = device.type == "cuda"
     device_type = "cuda" if use_cuda else "cpu"
+    best_val_loss = torch.inf
 
     # Configure CUDA / Nvidia A100 performance optimizations
     if use_cuda:
@@ -143,6 +165,9 @@ def train(
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
+            # Update Exponential Moving Average of weights
+            ema.update(model)
+
             train_loss += loss.item() * batch_X.size(0)
             _, preds = torch.max(outputs, 1)
             train_correct += (preds == batch_y).sum().item()
@@ -151,8 +176,9 @@ def train(
         epoch_train_loss = train_loss / train_total
         epoch_train_acc = train_correct / train_total
 
-        # --- Validation Phase (Running Loss & Validation Accuracy) ---
-        model.eval()
+        # --- Validation Phase (Evaluated on smoothed EMA Model to eliminate loss spikes) ---
+        eval_model = ema.ema_model
+        eval_model.eval()
         val_loss = 0.0
         val_correct = 0
         val_total = 0
@@ -162,7 +188,7 @@ def train(
                 batch_X = batch_X.to(device, non_blocking=use_cuda)
                 batch_y = batch_y.to(device, non_blocking=use_cuda)
                 with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
-                    outputs = model(batch_X)
+                    outputs = eval_model(batch_X)
                     loss = criterion(outputs, batch_y)
 
                 val_loss += loss.item() * batch_X.size(0)
@@ -186,11 +212,11 @@ def train(
               f"Train Loss: {epoch_train_loss:.4f}, Train Acc: {epoch_train_acc:.4f} | "
               f"Val Loss: {epoch_val_loss:.4f}, Val Acc: {epoch_val_acc:.4f}")
 
-        # Save latest model at each epoch
+        # Save latest model at each epoch (saving the smoothed EMA weights for evaluation)
         if latest_path is not None:
             current_time = time.time() - start_time
             latest_information = consolidate_information(
-                model=model,
+                model=eval_model,
                 val_accuracy=epoch_val_acc,
                 criterion=criterion,
                 optimiser=optimizer,
@@ -199,15 +225,19 @@ def train(
                 training_time=current_time,
                 losses=(train_losses, val_losses, epochs)
             )
-            save_checkpoint(path=latest_path, model=model, information=latest_information)
+            save_checkpoint(path=latest_path, model=eval_model, information=latest_information)
 
-        # Update best model immediately if validation accuracy improves
-        if best_path is not None and epoch_val_acc > best_val_accuracy:
-            print(f" -> Validation accuracy improved ({best_val_accuracy:.4f} -> {epoch_val_acc:.4f}). Saving best model to '{best_path}'.")
+        # Update best model if validation metric improves (prioritizing accuracy and loss calibration)
+        improved = (epoch_val_acc > best_val_accuracy + 1e-4) or (
+            abs(epoch_val_acc - best_val_accuracy) <= 1e-4 and epoch_val_loss < best_val_loss
+        )
+        if best_path is not None and improved:
+            print(f" -> Validation metric improved (Acc: {best_val_accuracy:.4f} -> {epoch_val_acc:.4f}, Loss: {best_val_loss:.4f} -> {epoch_val_loss:.4f}). Saving best EMA model to '{best_path}'.")
             best_val_accuracy = epoch_val_acc
+            best_val_loss = epoch_val_loss
             current_time = time.time() - start_time
             best_information = consolidate_information(
-                model=model,
+                model=eval_model,
                 val_accuracy=epoch_val_acc,
                 criterion=criterion,
                 optimiser=optimizer,
@@ -216,11 +246,11 @@ def train(
                 training_time=current_time,
                 losses=(train_losses, val_losses, epochs)
             )
-            save_checkpoint(path=best_path, model=model, information=best_information)
+            save_checkpoint(path=best_path, model=eval_model, information=best_information)
 
         # Check Early Stopping
         if early_stopping is not None:
-            early_stopping(epoch_val_acc, epoch_val_loss, model, epoch)
+            early_stopping(epoch_val_acc, epoch_val_loss, eval_model, epoch)
             if early_stopping.early_stop:
                 print(f"\nEarly stopping triggered at epoch {epoch}. Stopping training early.")
                 break
