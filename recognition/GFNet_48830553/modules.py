@@ -245,11 +245,10 @@ class GlobalFilter(nn.Module):
         self.h = h
         self.w = w
         # Real FFT along width dimension produces w // 2 + 1 non-redundant frequencies
-        # Initialised to unity-scale magnitude so frequency signals are not attenuated to zero at initialisation
-        # Real part initialized around 1.0, imaginary part near 0.0 with small variance
-        weight_init = torch.zeros(h, w // 2 + 1, dim, 2, dtype=torch.float32)
-        weight_init[..., 0] = 1.0 + torch.randn(h, w // 2 + 1, dim) * 0.02
-        weight_init[..., 1] = torch.randn(h, w // 2 + 1, dim) * 0.02
+        # Initialized with zero-mean Gaussian (std=0.02) following original GFNet specification.
+        # Avoids biasing every frequency to unity gain at start, which prevents passing
+        # unconstrained high-frequency noise that causes validation loss spikes.
+        weight_init = torch.randn(h, w // 2 + 1, dim, 2, dtype=torch.float32) * 0.02
         self.complex_weight = nn.Parameter(weight_init)
 
     def forward(self, x):
@@ -373,15 +372,16 @@ class GFNet(nn.Module):
     def get_parameter_groups(self, weight_decay=1e-2):
         """
         Separates parameters into decay and no-decay groups.
-        Excludes 1D tensors (biases, LayerNorm, LayerScale), positional embeddings,
-        and complex frequency filter weights from weight decay.
+        Excludes 1D tensors (biases, LayerNorm, LayerScale) and positional embeddings.
+        Applies weight decay to complex frequency filter weights to prevent runaway
+        high-frequency amplification that leads to severe validation loss spikes.
         """
         decay_params = []
         no_decay_params = []
         for name, param in self.named_parameters():
             if not param.requires_grad:
                 continue
-            if param.ndim <= 1 or name.endswith(".bias") or "pos_embed" in name or "complex_weight" in name or "gamma" in name:
+            if param.ndim <= 1 or name.endswith(".bias") or "pos_embed" in name or "gamma" in name:
                 no_decay_params.append(param)
             else:
                 decay_params.append(param)
