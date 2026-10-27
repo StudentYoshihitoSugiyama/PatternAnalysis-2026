@@ -9,6 +9,17 @@ from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatr
 import matplotlib.pyplot as plt
 
 
+def compute_stats(tensor):
+    """
+    Computes mean, variance, and standard deviation of a PyTorch tensor using PyTorch library calls.
+    """
+    if tensor.numel() == 0:
+        return 0.0, 0.0, 0.0
+    mean = torch.mean(tensor).item()
+    var = torch.var(tensor, unbiased=False).item() if tensor.numel() > 1 else 0.0
+    std = torch.std(tensor, unbiased=False).item() if tensor.numel() > 1 else 0.0
+    return mean, var, std
+
 def fast_evaluate_model(model, test_loader, device):
     """
     Computes total inference latency across the test dataset with CUDA acceleration.
@@ -58,15 +69,10 @@ def evaluate_model(model, test_loader, device, output_path):
     test_correct = 0
     test_total = 0
 
-    sum_tp_conf = 0.0
-    sum_tn_conf = 0.0
-    sum_fp_conf = 0.0
-    sum_fn_conf = 0.0
-
-    count_tp = 0
-    count_tn = 0
-    count_fp = 0
-    count_fn = 0
+    tp_confs = []
+    tn_confs = []
+    fp_confs = []
+    fn_confs = []
 
     with torch.no_grad():
         for batch_X, batch_y in test_loader:
@@ -83,40 +89,40 @@ def evaluate_model(model, test_loader, device, output_path):
             confusion_matrix_metric.update(preds, batch_y)
             accuracy_metric.update(preds, batch_y)
 
-            # 2. Create boolean masks for each outcome category
+            # Create boolean masks for each outcome category
             tp_mask = (preds == 1) & (batch_y == 1)  # True Positive
             tn_mask = (preds == 0) & (batch_y == 0)  # True Negative
             fp_mask = (preds == 1) & (batch_y == 0)  # False Positive
             fn_mask = (preds == 0) & (batch_y == 1)  # False Negative
 
-            # 3. Accumulate sum of probabilities and counts per category across all samples
+            # Save sample confidences into lists per category
             if tp_mask.any():
-                sum_tp_conf += max_probs[tp_mask].sum().item()
-                count_tp += tp_mask.sum().item()
+                tp_confs.extend(max_probs[tp_mask].detach().cpu().tolist())
             if tn_mask.any():
-                sum_tn_conf += max_probs[tn_mask].sum().item()
-                count_tn += tn_mask.sum().item()
+                tn_confs.extend(max_probs[tn_mask].detach().cpu().tolist())
             if fp_mask.any():
-                sum_fp_conf += max_probs[fp_mask].sum().item()
-                count_fp += fp_mask.sum().item()
+                fp_confs.extend(max_probs[fp_mask].detach().cpu().tolist())
             if fn_mask.any():
-                sum_fn_conf += max_probs[fn_mask].sum().item()
-                count_fn += fn_mask.sum().item()
+                fn_confs.extend(max_probs[fn_mask].detach().cpu().tolist())
 
             test_correct += (preds == batch_y).sum().item()
             test_total += batch_y.size(0)
 
-    # Compute global sample-level average confidences without zero-batch dilution
-    total_avg_tp_conf = sum_tp_conf / count_tp if count_tp > 0 else 0.0
-    total_avg_tn_conf = sum_tn_conf / count_tn if count_tn > 0 else 0.0
-    total_avg_fp_conf = sum_fp_conf / count_fp if count_fp > 0 else 0.0
-    total_avg_fn_conf = sum_fn_conf / count_fn if count_fn > 0 else 0.0
+    # Convert confidence lists to PyTorch tensors and compute statistics via PyTorch calls
+    tp_tensor = torch.tensor(tp_confs, dtype=torch.float32)
+    tn_tensor = torch.tensor(tn_confs, dtype=torch.float32)
+    fp_tensor = torch.tensor(fp_confs, dtype=torch.float32)
+    fn_tensor = torch.tensor(fn_confs, dtype=torch.float32)
 
-    total_true_count = count_tp + count_tn
-    total_true_conf = (sum_tp_conf + sum_tn_conf) / total_true_count if total_true_count > 0 else 0.0
+    true_tensor = torch.cat([tp_tensor, tn_tensor]) if (len(tp_confs) + len(tn_confs) > 0) else torch.tensor([], dtype=torch.float32)
+    false_tensor = torch.cat([fp_tensor, fn_tensor]) if (len(fp_confs) + len(fn_confs) > 0) else torch.tensor([], dtype=torch.float32)
 
-    total_false_count = count_fp + count_fn
-    total_false_conf = (sum_fp_conf + sum_fn_conf) / total_false_count if total_false_count > 0 else 0.0
+    tp_mean, tp_var, tp_std = compute_stats(tp_tensor)
+    tn_mean, tn_var, tn_std = compute_stats(tn_tensor)
+    fp_mean, fp_var, fp_std = compute_stats(fp_tensor)
+    fn_mean, fn_var, fn_std = compute_stats(fn_tensor)
+    true_mean, true_var, true_std = compute_stats(true_tensor)
+    false_mean, false_var, false_std = compute_stats(false_tensor)
 
     precision = precision_metric.compute()
     recall = recall_metric.compute()
@@ -124,12 +130,12 @@ def evaluate_model(model, test_loader, device, output_path):
     test_accuracy = accuracy_metric.compute()
     total_time = fast_evaluate_model(model=model, test_loader=test_loader, device=device)
 
-    print(f"True positive confidence: {total_avg_tp_conf:.2f}")
-    print(f"True negative confidence: {total_avg_tn_conf:.2f}")
-    print(f"False positive confidence: {total_avg_fp_conf:.2f}")
-    print(f"False negative confidence: {total_avg_fn_conf:.2f}")
-    print(f"True confidence: {total_true_conf:.2f}")
-    print(f"False confidence: {total_false_conf:.2f}")
+    print(f"True positive confidence: {tp_mean:.2f} (Var: {tp_var:.4f}, Std: {tp_std:.4f})")
+    print(f"True negative confidence: {tn_mean:.2f} (Var: {tn_var:.4f}, Std: {tn_std:.4f})")
+    print(f"False positive confidence: {fp_mean:.2f} (Var: {fp_var:.4f}, Std: {fp_std:.4f})")
+    print(f"False negative confidence: {fn_mean:.2f} (Var: {fn_var:.4f}, Std: {fn_std:.4f})")
+    print(f"True confidence: {true_mean:.2f} (Var: {true_var:.4f}, Std: {true_std:.4f})")
+    print(f"False confidence: {false_mean:.2f} (Var: {false_var:.4f}, Std: {false_std:.4f})")
     print(f"Precision: {precision:.2f}")
     print(f"Recall: {recall:.2f}")
     print(f"Test Accuracy: {test_accuracy:.2f}")
@@ -137,12 +143,12 @@ def evaluate_model(model, test_loader, device, output_path):
     print(f"Confusion Matrix: {conf_matrix}")
 
     with open(output_path, "w") as f:
-        f.write(f"True positive confidence: {total_avg_tp_conf:.2f}\n")
-        f.write(f"True negative confidence: {total_avg_tn_conf:.2f}\n")
-        f.write(f"False positive confidence: {total_avg_fp_conf:.2f}\n")
-        f.write(f"False negative confidence: {total_avg_fn_conf:.2f}\n")
-        f.write(f"True confidence: {total_true_conf:.2f}\n")
-        f.write(f"False confidence: {total_false_conf:.2f}\n")
+        f.write(f"True positive confidence: {tp_mean:.2f} (Var: {tp_var:.4f}, Std: {tp_std:.4f})\n")
+        f.write(f"True negative confidence: {tn_mean:.2f} (Var: {tn_var:.4f}, Std: {tn_std:.4f})\n")
+        f.write(f"False positive confidence: {fp_mean:.2f} (Var: {fp_var:.4f}, Std: {fp_std:.4f})\n")
+        f.write(f"False negative confidence: {fn_mean:.2f} (Var: {fn_var:.4f}, Std: {fn_std:.4f})\n")
+        f.write(f"True confidence: {true_mean:.2f} (Var: {true_var:.4f}, Std: {true_std:.4f})\n")
+        f.write(f"False confidence: {false_mean:.2f} (Var: {false_var:.4f}, Std: {false_std:.4f})\n")
         f.write(f"Precision: {precision:.2f}\n")
         f.write(f"Recall: {recall:.2f}\n")
         f.write(f"Test Accuracy: {test_accuracy:.2f}\n")
