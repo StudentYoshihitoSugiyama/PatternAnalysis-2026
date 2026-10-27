@@ -31,7 +31,7 @@ def load_model(model_name: str, checkpoint_path: str, device: torch.device):
     model_name_lower = model_name.lower()
     if model_name_lower == "gfnet":
         model = GFNet()
-    elif model_name_lower == "resnet18":
+    elif model_name_lower == "rn18":
         model = ResNet18()
     else:
         raise ValueError(f"Unsupported model: {model_name}. Choose 'gfnet' or 'resnet18'.")
