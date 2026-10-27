@@ -72,7 +72,7 @@ Due to the memory restriction of a singular Nvidia A100, the max batch size had 
 
 #### Epoch
 
-The initial max epoch was set to a small number (5) to determine feasibility, but was increased (150) once feasibility was validated.
+The initial max epoch was set to a small number (5) to determine feasibility, but was increased (250) once feasibility was validated.
 
 #### Weight Decay
 
