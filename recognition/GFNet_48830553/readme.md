@@ -104,6 +104,48 @@ CUDA and Nvidia A100 related code are implemented to imporve training time by ut
 
 ### Results
 
+After training and testing using "train.py" and "predict.py", results were saved. Furthermore, graphs of the losses from each model and spread of the winning/predicted class confidences/probabilites were saved.
+
+#### ResNet18
+
+True positive confidence: 0.78 (Var: 0.0132, Std: 0.1147)  
+True negative confidence: 0.68 (Var: 0.0133, Std: 0.1153)  
+False positive confidence: 0.71 (Var: 0.0141, Std: 0.1186)  
+False negative confidence: 0.63 (Var: 0.0142, Std: 0.1193)  
+True confidence: 0.75 (Var: 0.0155, Std: 0.1243)  
+False confidence: 0.70 (Var: 0.0149, Std: 0.1221)  
+Precision: 0.59  
+Recall: 0.88  
+Test Accuracy: 0.64  
+Inference time: 12.04  
+Confusion Matrix: tensor([[1828., 2712.], [ 535., 3925.]], device='cuda:0')  
+
+Losses:  
+[View the Document](/Results/BEST_RN18_graph.pdf)  
+
+Confidence Spread:  
+[View the Document](/Results/BEST_RN18_confidence_spread.pdf)  
+
+#### GFNet
+
+True positive confidence: 0.87 (Var: 0.0093, Std: 0.0965)  
+True negative confidence: 0.84 (Var: 0.0212, Std: 0.1455)  
+False positive confidence: 0.81 (Var: 0.0159, Std: 0.1261)  
+False negative confidence: 0.77 (Var: 0.0238, Std: 0.1543)  
+True confidence: 0.86 (Var: 0.0140, Std: 0.1181)  
+False confidence: 0.80 (Var: 0.0176, Std: 0.1328)  
+Precision: 0.64  
+Recall: 0.88  
+Test Accuracy: 0.70  
+Inference time: 9.16  
+Confusion Matrix: tensor([[2366., 2174.], [ 514., 3946.]], device='cuda:0')  
+
+Losses:  
+[View the Document](/Results/BEST_GFNET_graph.pdf)  
+
+Confidence Spread:  
+[View the Document](/Results/BEST_GFNET_confidence_spread.pdf)  
+
 ### Discussion
 
 ## Conclusion
