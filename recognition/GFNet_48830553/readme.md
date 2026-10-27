@@ -164,7 +164,15 @@ False Positives:
 ![Image not Found](/Results/GFNET/Wrong_Medium/sample_1087_true0_pred1_conf0.8405_1445758_96.jpeg)
 ![Image not Found](/Results/GFNET/Wrong_Medium/sample_1573_true0_pred1_conf0.8406_1387622_92.jpeg)
 
-### Discussion
+### Discussion/Analysis
+
+Firstly, the ResNet18 had a test accuracy of around 64% with an inference time of 12 seconds, while GFNet had a test accuracy of 70% with an inference time of 9 seconds. Furthermore, the GFNet had slightly better precision of 0.64 than ResNet18 with a precision of 0.59. Overall, GFNet slightly performed better than ResNet18 with respect to test accuracy, inference time, and precision.  
+
+Secondly, the GFNet was not able to attain the 80% test accuracy minimum performance. Furthermore, the GFNet had a precision of 0.64 and recall of 0.88. The low precision indicates the model has a tendency to identify NC classes as AD classes. Recall of the model is high, but is not to standard of medical professions, which means the model still has a relatively high false negative rate. The high false negative rate is critical as medical professions will not tolerate false negatives as much as false positives. Therefore, the model is not suitable for MRI classifications for AD and NC labels in the current state.  
+
+Thirdly, by analysing the confidence spreads in the graph, it is clear that there is significant overlap between true predictions and false confidences. Therefore, it is not possible to cleanly differentiate wrong confidences/probabilities and correct confidences/probabilities. The overconfidence nature of machine learning models is not solvable with a simple confidence threshold based on this current GFNet model.  
+
+Forthly, by analysing the false predictions, it appears that the GFNet model is unable to pick on difference in groove depth when comparing with the true negatives and false positives. Furthermore, it appears that there is signifcant difference in image styles between false negatives and true positives. The model could be potentially further tuned to analyse the grooves to improve the false positives. However, it appears that there could be a significant data distribution mismatch if the MRI types of the false negatives in the testing dataset are not found in the training dataset. This mismatch in data distribution may be the leading cause of the overall lower performance of both the ResNet18 model and GFNet model.  
 
 ## Conclusion
 
