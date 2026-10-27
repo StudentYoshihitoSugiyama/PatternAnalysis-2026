@@ -21,43 +21,39 @@ def compute_stats(tensor):
     return mean, var, std
 
 
-def plot_confidence_spread(tp_confs, tn_confs, fp_confs, fn_confs, save_path):
+def plot_confidence_spread(tp_confs, tn_confs, fp_confs, fn_confs, save_path, model_name="Model"):
     """
-    Visualises the spread of confidences across TP, TN, FP, and FN as graphs.
+    Visualises the spread of confidences across TP, TN, FP, and FN as vertically aligned histograms.
     """
-    categories = ["TP", "TN", "FP", "FN"]
-    data = [tp_confs, tn_confs, fp_confs, fn_confs]
-    colors = ["#2ca02c", "#1f77b4", "#ff7f0e", "#d62728"]
+    categories = [
+        ("True Positive (TP)", tp_confs, "#2ca02c"),
+        ("True Negative (TN)", tn_confs, "#1f77b4"),
+        ("False Positive (FP)", fp_confs, "#ff7f0e"),
+        ("False Negative (FN)", fn_confs, "#d62728"),
+    ]
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(8, 12), sharex=True)
+    fig.suptitle(f"{model_name} - Confidence Spread by Prediction Category", fontsize=14, y=0.99)
 
-    # 1. Box plot to visualize confidence spread, quartiles, and outliers
-    valid_data = [d if len(d) > 0 else [0.0] for d in data]
-    box = axes[0].boxplot(valid_data, patch_artist=True)
-    axes[0].set_xticks(range(1, len(categories) + 1))
-    axes[0].set_xticklabels(categories)
-    for patch, color in zip(box["boxes"], colors):
-        patch.set_facecolor(color)
-        patch.set_alpha(0.6)
-    axes[0].set_title("Confidence Spread by Category (Box Plot)")
-    axes[0].set_xlabel("Category")
-    axes[0].set_ylabel("Confidence")
-    axes[0].set_ylim(-0.05, 1.05)
-    axes[0].grid(True, linestyle="--", alpha=0.5)
-
-    # 2. Histograms to visualize confidence distribution across categories
     bins = [i / 20.0 for i in range(21)]
-    for cat, confs, color in zip(categories, data, colors):
-        if len(confs) > 0:
-            axes[1].hist(confs, bins=bins, alpha=0.5, label=f"{cat} (n={len(confs)})", color=color, density=True)
-    axes[1].set_title("Confidence Distribution Histogram")
-    axes[1].set_xlabel("Confidence")
-    axes[1].set_ylabel("Density")
-    axes[1].set_xlim(-0.05, 1.05)
-    axes[1].grid(True, linestyle="--", alpha=0.5)
-    axes[1].legend()
 
-    plt.tight_layout()
+    for ax, (label, confs, color) in zip(axes, categories):
+        if len(confs) > 0:
+            ax.hist(confs, bins=bins, color=color, alpha=0.7, edgecolor="black")
+            mean_val = sum(confs) / len(confs)
+            ax.axvline(mean_val, color="black", linestyle="--", linewidth=1.5, label=f"Mean: {mean_val:.2f}")
+            ax.legend(loc="upper left")
+        else:
+            ax.text(0.5, 0.5, "No samples", horizontalalignment="center", verticalalignment="center", transform=ax.transAxes)
+
+        ax.set_title(f"{label} (n={len(confs)})", fontsize=11)
+        ax.set_ylabel("Count", fontsize=10)
+        ax.set_xlim(-0.02, 1.02)
+        ax.grid(True, linestyle="--", alpha=0.5)
+
+    axes[-1].set_xlabel("Confidence", fontsize=11)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.98])
     plt.savefig(save_path)
     plt.close()
 
@@ -87,7 +83,7 @@ def fast_evaluate_model(model, test_loader, device):
     total_time = end_time - start_time
     return total_time
 
-def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None):
+def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None, model_name="Model"):
     """
     Evaluates the model on the test dataset with CUDA acceleration and sample-accurate confidence statistics.
     """
@@ -198,7 +194,7 @@ def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None
         f.write(f"Confusion Matrix: {conf_matrix}\n")
 
     if conf_graph_path:
-        plot_confidence_spread(tp_confs, tn_confs, fp_confs, fn_confs, conf_graph_path)
+        plot_confidence_spread(tp_confs, tn_confs, fp_confs, fn_confs, conf_graph_path, model_name=model_name)
 
 
 if __name__ == "__main__":
@@ -251,7 +247,7 @@ if __name__ == "__main__":
     _, _, test_loader = data_loaders()
 
     print("Begin testing...")
-    evaluate_model(model=model, test_loader=test_loader, device=device, output_path=result_path, conf_graph_path=conf_graph_path)
+    evaluate_model(model=model, test_loader=test_loader, device=device, output_path=result_path, conf_graph_path=conf_graph_path, model_name=f"{model_version} ({version})")
     
     print("Testing Visualisation")
     print(f"Result Path: {result_path}")
