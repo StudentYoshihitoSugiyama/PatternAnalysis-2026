@@ -20,6 +20,48 @@ def compute_stats(tensor):
     std = torch.std(tensor, unbiased=False).item() if tensor.numel() > 1 else 0.0
     return mean, var, std
 
+
+def plot_confidence_spread(tp_confs, tn_confs, fp_confs, fn_confs, save_path):
+    """
+    Visualises the spread of confidences across TP, TN, FP, and FN as graphs.
+    """
+    categories = ["TP", "TN", "FP", "FN"]
+    data = [tp_confs, tn_confs, fp_confs, fn_confs]
+    colors = ["#2ca02c", "#1f77b4", "#ff7f0e", "#d62728"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    # 1. Box plot to visualize confidence spread, quartiles, and outliers
+    valid_data = [d if len(d) > 0 else [0.0] for d in data]
+    box = axes[0].boxplot(valid_data, patch_artist=True)
+    axes[0].set_xticks(range(1, len(categories) + 1))
+    axes[0].set_xticklabels(categories)
+    for patch, color in zip(box["boxes"], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.6)
+    axes[0].set_title("Confidence Spread by Category (Box Plot)")
+    axes[0].set_xlabel("Category")
+    axes[0].set_ylabel("Confidence")
+    axes[0].set_ylim(-0.05, 1.05)
+    axes[0].grid(True, linestyle="--", alpha=0.5)
+
+    # 2. Histograms to visualize confidence distribution across categories
+    bins = [i / 20.0 for i in range(21)]
+    for cat, confs, color in zip(categories, data, colors):
+        if len(confs) > 0:
+            axes[1].hist(confs, bins=bins, alpha=0.5, label=f"{cat} (n={len(confs)})", color=color, density=True)
+    axes[1].set_title("Confidence Distribution Histogram")
+    axes[1].set_xlabel("Confidence")
+    axes[1].set_ylabel("Density")
+    axes[1].set_xlim(-0.05, 1.05)
+    axes[1].grid(True, linestyle="--", alpha=0.5)
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+
+
 def fast_evaluate_model(model, test_loader, device):
     """
     Computes total inference latency across the test dataset with CUDA acceleration.
@@ -45,9 +87,9 @@ def fast_evaluate_model(model, test_loader, device):
     total_time = end_time - start_time
     return total_time
 
-def evaluate_model(model, test_loader, device, output_path):
+def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None):
     """
-    Evaluates the model on the test dataset with CUDA acceleration and sample-accurate confidence averaging.
+    Evaluates the model on the test dataset with CUDA acceleration and sample-accurate confidence statistics.
     """
     precision_metric = BinaryPrecision(device=device)
     recall_metric = BinaryRecall(device=device)
@@ -155,6 +197,9 @@ def evaluate_model(model, test_loader, device, output_path):
         f.write(f"Inference time: {total_time:.2f}\n")
         f.write(f"Confusion Matrix: {conf_matrix}\n")
 
+    if conf_graph_path:
+        plot_confidence_spread(tp_confs, tn_confs, fp_confs, fn_confs, conf_graph_path)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ResNet-18 model and GFNet model testing")
@@ -182,9 +227,11 @@ if __name__ == "__main__":
 
     result_path = "Results/" + output_path + "_information.txt"
     graph_path = "Results/" + output_path + "_graph.pdf"
+    conf_graph_path = "Results/" + output_path + "_confidence_spread.pdf"
 
     os.makedirs(os.path.dirname(result_path) or ".", exist_ok=True)
     os.makedirs(os.path.dirname(graph_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(conf_graph_path) or ".", exist_ok=True)
 
     print("Loading model...")
     model_info = load_checkpoint(model_path, device=device)
@@ -204,11 +251,12 @@ if __name__ == "__main__":
     _, _, test_loader = data_loaders()
 
     print("Begin testing...")
-    evaluate_model(model=model, test_loader=test_loader, device=device, output_path=result_path)
+    evaluate_model(model=model, test_loader=test_loader, device=device, output_path=result_path, conf_graph_path=conf_graph_path)
     
     print("Testing Visualisation")
     print(f"Result Path: {result_path}")
     print(f"Graph Path: {graph_path}")
+    print(f"Confidence Spread Graph Path: {conf_graph_path}")
     
     loss_info = model_info.get("information").get("losses")
     train_losses, val_losses, epochs = loss_info
