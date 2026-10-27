@@ -176,6 +176,8 @@ Forthly, by analysing the false predictions, it appears that the GFNet model is 
 
 ## Conclusion
 
+The GFNet model did outperform the ResNet18 model, even if it is by a small margin. Furthermore, due to the overall low test accuracy, low precision, and low recall, the GFNet in it's current state with the provided dataset is not suitable for MRI classifications. Moreover, the overconfidence of machine learning models cannot be simply adjusted by placing a confidence threshold. Finally, there is suspected data distribution mismatch between the provided test and training datasets that led to the overall performance degradation in both ResNet18 and GFNet models.
+
 ## Feasibility Report
 
 *Name: Yoshihito Sugiyama*
