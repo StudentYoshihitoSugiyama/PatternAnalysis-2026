@@ -200,8 +200,10 @@ def main():
         "Wrong": select_samples_by_confidence(wrong_samples, num_samples=5)
     }
 
+    output_path = args.output_dir + "/" + args.model
+
     # Save images into Results/CORRECTNESS_CONFIDENCE/
-    save_selected_images(categorized, args.output_dir)
+    save_selected_images(categorized, output_path)
     print("Inference and image categorization completed.")
 
 
