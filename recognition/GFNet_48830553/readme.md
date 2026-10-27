@@ -88,7 +88,7 @@ Data augmenation in the form of jitter, flips, affine transformation, erasing, a
 
 #### Learning rate
 
-Learning rate was adjusted to a small number with warm up to allow smoother learning with smaller chance to overshoot minimas.
+Learning rate was adjusted to a small number to allow smoother learning with smaller chance to overshoot minimas. Furthermore, warm up was introduced to allow the model to learn the appropriate directions of parameter changes.
 
 #### Initial values
 
