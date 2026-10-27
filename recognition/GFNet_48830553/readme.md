@@ -32,6 +32,7 @@ Flags:
 
 ### Requirements
 
+- python=3.14.7
 - torch=2.14.1
 - torchvision=0.29.1
 - torcheval=0.0.7
