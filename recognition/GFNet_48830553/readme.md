@@ -50,11 +50,11 @@ This report will focus on the overconfidence dilemma of machine learning models 
 
 ### Model
 
-The chosen baseline model is Residual Neural Network 18-Layers (ResNet18) and the chosen advanced model is Global Filter Network (GFNet). ResNet18 is chosen as a baseline model for it's overall performance in classification. GFNet is chosen due to it's fast O(nlog(n)) run time complexity with the accuraccy of a normal transformer model. GFNet has a run time O(nlog(n)) because the model replaces the self-attention layer with a global filter in the Fourier domain, which is an element-wise multiplicaiton, but with the only drawback being the O(nlog(n)) complexity of the Fourier and Inverse Fourier Transformations.
+The chosen baseline model is Residual Neural Network 18-Layers (ResNet18) and the chosen advanced model is Global Filter Network (GFNet). ResNet18 is chosen as a baseline model for it's overall performance and inference speed in classification [1]. GFNet is chosen due to it's fast O(nlog(n)) run time complexity with the accuraccy of a normal transformer model. GFNet has a run time O(nlog(n)) because the model replaces the self-attention layer with a global filter in the Fourier domain, which is an element-wise multiplicaiton, but with the only drawback being the O(nlog(n)) complexity of the Fourier and Inverse Fourier Transformations [2].
 
 ### Evaluation Process
 
-To answer the dilemma, confidence of each winning class prediction will be analysed to determine whether there is a significant difference between confident right answers and unconfident wrong answers. Furthermore, to answer whether an advanced machine learning models are suitable for MRI classification, accuracy (0-1 loss) and infernce time will be measured. A machine learning model should have high accuracy to be useful for operational use to filter hard classification that can be handed to professionals instead. Moreover, a machine learning model should have fast inference speed to be comparable to professionals.
+To answer the dilemma, confidence of each winning class prediction will be analysed to determine whether there is a significant difference between confident right answers and unconfident wrong answers. Furthermore, to answer whether an advanced machine learning models are suitable for MRI classification, precision, recall, and accuracy (0-1 loss)  will be measured. A machine learning model should have high accuracy to be useful for operational use to filter hard classification that can be handed to professionals instead. Moreover, high precision is required to reduce the extra work for professions in the event of overwhelming number of false positives, and high recall is required to ensure patients are not mislabeled as NC and left untreated [3].
 
 ### Data Processing
 
@@ -168,7 +168,7 @@ False Positives:
 
 Firstly, the ResNet18 had a test accuracy of around 64% with an inference time of 12 seconds, while GFNet had a test accuracy of 70% with an inference time of 9 seconds. Furthermore, the GFNet had slightly better precision of 0.64 than ResNet18 with a precision of 0.59. Overall, GFNet slightly performed better than ResNet18 with respect to test accuracy, inference time, and precision.  
 
-Secondly, the GFNet was not able to attain the 80% test accuracy minimum performance. Furthermore, the GFNet had a precision of 0.64 and recall of 0.88. The low precision indicates the model has a tendency to identify NC classes as AD classes. Recall of the model is high, but is not to standard of medical professions, which means the model still has a relatively high false negative rate. The high false negative rate is critical as medical professions will not tolerate false negatives as much as false positives. Therefore, the model is not suitable for MRI classifications for AD and NC labels in the current state.  
+Secondly, the GFNet was not able to attain the 80% test accuracy minimum performance. Furthermore, the GFNet had a precision of 0.64 and recall of 0.88. The low precision indicates the model has a tendency to identify NC classes as AD classes. Recall of the model is high, but is not to standard of medical professions [3], which means the model still has a relatively high false negative rate. The high false negative rate is critical as medical professions will not tolerate false negatives as much as false positives [3]. Therefore, the model is not suitable for MRI classifications for AD and NC labels in the current state.  
 
 Thirdly, by analysing the confidence spreads in the graph, it is clear that there is significant overlap between true predictions and false confidences. Therefore, it is not possible to cleanly differentiate wrong confidences/probabilities and correct confidences/probabilities. The overconfidence nature of machine learning models is not solvable with a simple confidence threshold based on this current GFNet model.  
 
@@ -229,6 +229,14 @@ To demonstrate that a model can reliably determine cancer/normal organs with an 
 
 ## References
 
+[1] T. Shahriar, "Comparative Analysis of Lightweight Deep Learning Models for Memory-Constrained Devices," *arXiv preprint arXiv:2505.03303*, May 2025. [Online]. Available: [https://arxiv.org/html/2505.03303v1](https://arxiv.org/html/2505.03303v1)
+
+[2] Y. Rao, W. Zhao, Z. Zhu, J. Lu, and J. Zhou, "Global Filter Networks for Image Classification," *arXiv preprint arXiv:2107.00645*, Oct. 2021. [Online]. Available: [https://arxiv.org/abs/2107.00645](https://arxiv.org/abs/2107.00645)
+
+[3] Duponte, "False negatives, the hidden risk in rapid diagnostics," Nov. 2025. [Online]. Available: [https://duponteadn.com/en/false-negatives-the-hidden-risk-in-rapid-diagnostics/](https://duponteadn.com/en/false-negatives-the-hidden-risk-in-rapid-diagnostics/)
+
 ## AI Reference
 
 Gemini 3.8 Low, Medium, and High was used to create the code and suggest improvements on the training loop and models.
+
+Gemini Auto was used to create the reference list.
