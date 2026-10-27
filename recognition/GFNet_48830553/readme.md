@@ -121,10 +121,10 @@ Inference time: 12.04
 Confusion Matrix: tensor([[1828., 2712.], [ 535., 3925.]], device='cuda:0')  
 
 Losses:  
-[View the Document](/Results/BEST_RN18_graph.pdf)  
+[View the Graph](/Results/BEST_RN18_graph.pdf)  
 
 Confidence Spread:  
-[View the Document](/Results/BEST_RN18_confidence_spread.pdf)  
+[View the Graph](/Results/BEST_RN18_confidence_spread.pdf)  
 
 #### GFNet
 
@@ -141,10 +141,28 @@ Inference time: 9.16
 Confusion Matrix: tensor([[2366., 2174.], [ 514., 3946.]], device='cuda:0')  
 
 Losses:  
-[View the Document](/Results/BEST_GFNET_graph.pdf)  
+[View the Graph](/Results/BEST_GFNET_graph.pdf)  
 
 Confidence Spread:  
-[View the Document](/Results/BEST_GFNET_confidence_spread.pdf)  
+[View the Graph](/Results/BEST_GFNET_confidence_spread.pdf)  
+
+#### Predictions for GFNet
+
+True Negatives:  
+![Image not Found](/Results/GFNET/Correct_High/sample_1212_true0_pred0_conf0.9966_1186737_110.jpeg)
+![Image not Found](/Results/GFNET/Correct_High/sample_1419_true0_pred0_conf0.9970_1446679_96.jpeg)  
+
+False Negatives:  
+![Image not Found](/Results/GFNET/Wrong_High/sample_4685_true1_pred0_conf0.9998_985197_94.jpeg)
+![Image not Found](/Results/GFNET/Wrong_High/sample_6288_true1_pred0_conf0.9998_985197_102.jpeg)  
+
+True Positives:  
+![Image not Found](/Results/GFNET/Correct_Medium/sample_4861_true1_pred1_conf0.9067_391567_94.jpeg)
+![Image not Found](/Results/GFNET/Correct_Medium/sample_5525_true1_pred1_conf0.9067_1122616_106.jpeg)  
+
+False Positives:  
+![Image not Found](/Results/GFNET/Wrong_Medium/sample_1087_true0_pred1_conf0.8405_1445758_96.jpeg)
+![Image not Found](/Results/GFNET/Wrong_Medium/sample_1573_true0_pred1_conf0.8406_1387622_92.jpeg)
 
 ### Discussion
 
