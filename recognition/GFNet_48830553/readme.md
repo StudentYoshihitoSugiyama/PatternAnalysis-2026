@@ -50,7 +50,7 @@ This report will focus on the overconfidence dilemma of machine learning models 
 
 ### Model
 
-The chosen baseline model is Residual Neural Network 18-Layers (ResNet18) and the chosen advanced model is Global Filter Network (GFNet). ResNet18 is chosen as a baseline model for it's overall performance in classification. GFNet is chosen due to it's fast O(nlog(n)) run time complexity with the accuraccy of a normal transformer model. GFNet has a run time O(nlog(n)) because the model replaces the self-attention layer with a global filter in the Fourier domain, which is an element-wise multiplicaiton, but with the only drawback being the O(nlog(n)) complexity of the Fourier Transformation and Inverse Transformation.
+The chosen baseline model is Residual Neural Network 18-Layers (ResNet18) and the chosen advanced model is Global Filter Network (GFNet). ResNet18 is chosen as a baseline model for it's overall performance in classification. GFNet is chosen due to it's fast O(nlog(n)) run time complexity with the accuraccy of a normal transformer model. GFNet has a run time O(nlog(n)) because the model replaces the self-attention layer with a global filter in the Fourier domain, which is an element-wise multiplicaiton, but with the only drawback being the O(nlog(n)) complexity of the Fourier and Inverse Fourier Transformations.
 
 ### Evaluation Process
 
