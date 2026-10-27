@@ -58,7 +58,7 @@ To answer the dilemma, confidence of each winning class prediction will be analy
 
 ### Data Processing
 
-The data is stored as NC classes and AD classes for both provided training and testing datasets. The training dataset is further splitted into validation (20%) and training (80%) data loaders. Furthermore, during the data split, the datasets are splitted with respect to the patients to ensure no data leakage occurs. Moreover, the data is splitted with even distribution of classes in the validation and training data loaders.
+The data is stored as NC classes and AD classes for both provided training and testing datasets. The training dataset is further splitted into validation (20%) and training (80%) data loaders. Furthermore, during the data split, the datasets are splitted with respect to the patients to ensure no data leakage occurs. Moreover, the data is splitted with even distribution of classes in the validation and training data loaders. Furthermore, the AD classes will be classified as a 1 (true) and NC classes as 0 (false) in a binary classification.
 
 ## Process
 
