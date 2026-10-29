@@ -96,7 +96,7 @@ Initial values of parameters were adjusted for faster and stable convergence.
 
 #### Patch size
 
-Reduced patch size of the GFNet for finer and granular patching to improve local feature extraction
+Reduced embedding patch size of the GFNet for finer and granular patching to improve local feature extraction.
 
 #### CUDA and Hardware
 
