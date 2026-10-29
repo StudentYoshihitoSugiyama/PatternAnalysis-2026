@@ -2,7 +2,7 @@ import torch
 import time
 import argparse
 import os
-from modules import load_checkpoint, get_device, ResNet18, GFNet
+from modules import load_checkpoint, get_device, ResNet18, GFNet, get_criterion
 from dataset import data_loaders
 from train import PATH_BEST_MODEL, PATH_LATEST_MODEL
 from torcheval.metrics import BinaryPrecision, BinaryRecall, BinaryConfusionMatrix, BinaryAccuracy
@@ -83,14 +83,24 @@ def fast_evaluate_model(model, test_loader, device):
     total_time = end_time - start_time
     return total_time
 
-def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None, model_name="Model"):
+def evaluate_model(model, device, output_path, conf_graph_path=None, model_name="Model"):
     """
     Evaluates the model on the test dataset with CUDA acceleration and sample-accurate confidence statistics.
     """
+
+    print("Constructing data loaders...")
+    train_loader, val_loader, test_loader = data_loaders()
+    criterion = get_criterion()
+
     precision_metric = BinaryPrecision(device=device)
     recall_metric = BinaryRecall(device=device)
     confusion_matrix_metric = BinaryConfusionMatrix(device=device)
-    accuracy_metric = BinaryAccuracy(device=device)
+    test_accuracy_metric = BinaryAccuracy(device=device)
+    test_loss = 0
+    val_accuracy_metric = BinaryAccuracy(device=device)
+    val_loss = 0
+    train_accuracy_metric = BinaryAccuracy(device=device)
+    train_loss = 0
 
     use_cuda = device.type == "cuda"
     device_type = "cuda" if use_cuda else "cpu"
@@ -113,6 +123,30 @@ def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None
     fn_confs = []
 
     with torch.no_grad():
+        for batch_X, batch_y in train_loader:
+            batch_X = batch_X.to(device, non_blocking=use_cuda)
+            batch_y = batch_y.to(device, non_blocking=use_cuda)
+            with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
+                outputs = model(batch_X)
+
+            probs = torch.softmax(outputs, dim=1)
+            max_probs, preds = torch.max(probs, 1)
+            train_accuracy_metric.update(preds, batch_y)
+            train_loss += criterion(preds, batch_y)
+
+    with torch.no_grad():
+        for batch_X, batch_y in val_loader:
+            batch_X = batch_X.to(device, non_blocking=use_cuda)
+            batch_y = batch_y.to(device, non_blocking=use_cuda)
+            with torch.amp.autocast(device_type=device_type, dtype=amp_dtype, enabled=use_cuda):
+                outputs = model(batch_X)
+
+            probs = torch.softmax(outputs, dim=1)
+            max_probs, preds = torch.max(probs, 1)
+            val_accuracy_metric.update(preds, batch_y)
+            val_loss += criterion(preds, batch_y)
+
+    with torch.no_grad():
         for batch_X, batch_y in test_loader:
             batch_X = batch_X.to(device, non_blocking=use_cuda)
             batch_y = batch_y.to(device, non_blocking=use_cuda)
@@ -125,7 +159,7 @@ def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None
             precision_metric.update(preds, batch_y)
             recall_metric.update(preds, batch_y)
             confusion_matrix_metric.update(preds, batch_y)
-            accuracy_metric.update(preds, batch_y)
+            test_accuracy_metric.update(preds, batch_y)
 
             # Create boolean masks for each outcome category
             tp_mask = (preds == 1) & (batch_y == 1)  # True Positive
@@ -145,6 +179,7 @@ def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None
 
             test_correct += (preds == batch_y).sum().item()
             test_total += batch_y.size(0)
+            test_loss += criterion(preds, batch_y)
 
     # Convert confidence lists to PyTorch tensors and compute statistics via PyTorch calls
     tp_tensor = torch.tensor(tp_confs, dtype=torch.float32)
@@ -165,7 +200,9 @@ def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None
     precision = precision_metric.compute()
     recall = recall_metric.compute()
     conf_matrix = confusion_matrix_metric.compute()
-    test_accuracy = accuracy_metric.compute()
+    train_accuracy = train_accuracy_metric.compute()
+    val_accuracy = val_accuracy_metric.compute()
+    test_accuracy = test_accuracy_metric.compute()
     total_time = fast_evaluate_model(model=model, test_loader=test_loader, device=device)
 
     print(f"True positive confidence: {tp_mean:.2f} (Var: {tp_var:.4f}, Std: {tp_std:.4f})")
@@ -176,7 +213,8 @@ def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None
     print(f"False confidence: {false_mean:.2f} (Var: {false_var:.4f}, Std: {false_std:.4f})")
     print(f"Precision: {precision:.2f}")
     print(f"Recall: {recall:.2f}")
-    print(f"Test Accuracy: {test_accuracy:.2f}")
+    print(f"Train Accuracy: {train_accuracy:.2f} | Val Accuracy: {val_accuracy:.2f} |Test Accuracy: {test_accuracy:.2f}")
+    print(f"Train Loss: {train_loss:.2f} | Val Loss: {val_loss:.2f} | Test Loss: {test_loss:.2f}")
     print(f"Inference time: {total_time:.2f}")
     print(f"Confusion Matrix: {conf_matrix}")
 
@@ -189,7 +227,8 @@ def evaluate_model(model, test_loader, device, output_path, conf_graph_path=None
         f.write(f"False confidence: {false_mean:.2f} (Var: {false_var:.4f}, Std: {false_std:.4f})\n")
         f.write(f"Precision: {precision:.2f}\n")
         f.write(f"Recall: {recall:.2f}\n")
-        f.write(f"Test Accuracy: {test_accuracy:.2f}\n")
+        f.write(f"Train Accuracy: {train_accuracy:.2f} | Val Accuracy: {val_accuracy:.2f} |Test Accuracy: {test_accuracy:.2f}\n")
+        f.write(f"Train Loss: {train_loss:.2f} | Val Loss: {val_loss:.2f} | Test Loss: {test_loss:.2f}\n")
         f.write(f"Inference time: {total_time:.2f}\n")
         f.write(f"Confusion Matrix: {conf_matrix}\n")
 
@@ -243,11 +282,8 @@ if __name__ == "__main__":
     model.load_state_dict(model_weights)
     model.to(device=device)
 
-    print("Constructing data loaders...")
-    _, _, test_loader = data_loaders()
-
     print("Begin testing...")
-    evaluate_model(model=model, test_loader=test_loader, device=device, output_path=result_path, conf_graph_path=conf_graph_path, model_name=f"{model_version} ({version})")
+    evaluate_model(model=model, device=device, output_path=result_path, conf_graph_path=conf_graph_path, model_name=f"{model_version} ({version})")
     
     print("Testing Visualisation")
     print(f"Result Path: {result_path}")
