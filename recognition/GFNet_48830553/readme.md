@@ -121,10 +121,10 @@ Inference time: 12.04
 Confusion Matrix: tensor([[1828., 2712.], [ 535., 3925.]], device='cuda:0')  
 
 Losses:  
-[View the Graph](/Results/BEST_RN18_graph.pdf)  
+![Image not Found](/Images/BEST_RN18_graph-1.png)  
 
 Confidence Spread:  
-[View the Graph](/Results/BEST_RN18_confidence_spread.pdf)  
+![Image not Found](/Images/BEST_RN18_confidence_spread-1.png)  
 
 #### GFNet
 
@@ -141,10 +141,10 @@ Inference time: 9.16
 Confusion Matrix: tensor([[2366., 2174.], [ 514., 3946.]], device='cuda:0')  
 
 Losses:  
-[View the Graph](/Results/BEST_GFNET_graph.pdf)  
+![Image not Found](/Images/BEST_GFNET_graph-1.png)  
 
 Confidence Spread:  
-[View the Graph](/Results/BEST_GFNET_confidence_spread.pdf)  
+![Image not Found](/Images/BEST_GFNET_confidence_spread-1.png)  
 
 #### Predictions for GFNet
 
