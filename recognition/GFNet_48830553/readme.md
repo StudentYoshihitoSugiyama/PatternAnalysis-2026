@@ -154,7 +154,7 @@ True Negatives:
 
 False Negatives:  
 ![Image not Found](/Results/GFNET/Wrong_High/sample_4685_true1_pred0_conf0.9998_985197_94.jpeg)
-![Image not Found](/Results/GFNET/Wrong_High/sample_6288_true1_pred0_conf0.9998_985197_102.jpeg)  
+![Image not Found](/Results/GFNET/Wrong_Low/sample_6469_true1_pred0_conf0.5001_399798_95.jpeg)  
 
 True Positives:  
 ![Image not Found](/Results/GFNET/Correct_Medium/sample_4861_true1_pred1_conf0.9067_391567_94.jpeg)
