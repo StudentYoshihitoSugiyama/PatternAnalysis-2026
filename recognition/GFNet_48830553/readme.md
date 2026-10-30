@@ -54,7 +54,7 @@ The chosen baseline model is Residual Neural Network 18-Layers (ResNet18) and th
 
 ### Evaluation Process
 
-To answer the dilemma, confidence of each winning class prediction will be analysed to determine whether there is a significant difference between confident right answers and unconfident wrong answers. Furthermore, to answer whether an advanced machine learning models are suitable for MRI classification, precision, recall, and accuracy (0-1 loss)  will be measured. A machine learning model should have high accuracy to be useful for operational use to filter hard classification that can be handed to professionals instead. Moreover, high precision is required to reduce the extra work for professions in the event of overwhelming number of false positives, and high recall is required to ensure patients are not mislabeled as NC and left untreated [3].
+To answer the dilemma, confidence of each winning class prediction will be analysed to determine whether there is a significant difference between confident right answers and unconfident wrong answers. Furthermore, to answer whether an advanced machine learning models are suitable for MRI classification, inference time, precision, recall, and accuracy (0-1 loss)  will be measured. A machine learning model should have high accuracy to be useful for operational use to filter hard classification that can be handed to professionals instead. Moreover, high precision is required to reduce the extra work for professions in the event of overwhelming number of false positives, and high recall is required to ensure patients are not mislabeled as NC and left untreated [3].
 
 ### Data Processing
 
