@@ -97,10 +97,13 @@ def evaluate_model(model, device, output_path, conf_graph_path=None, model_name=
     confusion_matrix_metric = BinaryConfusionMatrix(device=device)
     test_accuracy_metric = BinaryAccuracy(device=device)
     test_loss = 0
+    test_total = 0
     val_accuracy_metric = BinaryAccuracy(device=device)
     val_loss = 0
+    val_total = 0
     train_accuracy_metric = BinaryAccuracy(device=device)
     train_loss = 0
+    train_total = 0
 
     use_cuda = device.type == "cuda"
     device_type = "cuda" if use_cuda else "cpu"
@@ -115,7 +118,6 @@ def evaluate_model(model, device, output_path, conf_graph_path=None, model_name=
 
     model.eval()
     test_correct = 0
-    test_total = 0
 
     tp_confs = []
     tn_confs = []
@@ -132,7 +134,8 @@ def evaluate_model(model, device, output_path, conf_graph_path=None, model_name=
             probs = torch.softmax(outputs, dim=1)
             max_probs, preds = torch.max(probs, 1)
             train_accuracy_metric.update(preds, batch_y)
-            train_loss += criterion(preds, batch_y)
+            train_loss += criterion(outputs, batch_y).item() * batch_X.size(0)
+            train_total += batch_y.size(0)
 
     with torch.no_grad():
         for batch_X, batch_y in val_loader:
@@ -144,7 +147,8 @@ def evaluate_model(model, device, output_path, conf_graph_path=None, model_name=
             probs = torch.softmax(outputs, dim=1)
             max_probs, preds = torch.max(probs, 1)
             val_accuracy_metric.update(preds, batch_y)
-            val_loss += criterion(preds, batch_y)
+            val_loss += criterion(outputs, batch_y).item() * batch_X.size(0)
+            val_total += batch_y.size(0)
 
     with torch.no_grad():
         for batch_X, batch_y in test_loader:
@@ -179,7 +183,7 @@ def evaluate_model(model, device, output_path, conf_graph_path=None, model_name=
 
             test_correct += (preds == batch_y).sum().item()
             test_total += batch_y.size(0)
-            test_loss += criterion(preds, batch_y)
+            test_loss += criterion(outputs, batch_y).item() * batch_X.size(0)
 
     # Convert confidence lists to PyTorch tensors and compute statistics via PyTorch calls
     tp_tensor = torch.tensor(tp_confs, dtype=torch.float32)
@@ -214,7 +218,7 @@ def evaluate_model(model, device, output_path, conf_graph_path=None, model_name=
     print(f"Precision: {precision:.2f}")
     print(f"Recall: {recall:.2f}")
     print(f"Train Accuracy: {train_accuracy:.2f} | Val Accuracy: {val_accuracy:.2f} |Test Accuracy: {test_accuracy:.2f}")
-    print(f"Train Loss: {train_loss:.2f} | Val Loss: {val_loss:.2f} | Test Loss: {test_loss:.2f}")
+    print(f"Train Loss: {train_loss/train_total:.2f} | Val Loss: {val_loss/val_total:.2f} | Test Loss: {test_loss/test_total:.2f}")
     print(f"Inference time: {total_time:.2f}")
     print(f"Confusion Matrix: {conf_matrix}")
 
@@ -228,7 +232,7 @@ def evaluate_model(model, device, output_path, conf_graph_path=None, model_name=
         f.write(f"Precision: {precision:.2f}\n")
         f.write(f"Recall: {recall:.2f}\n")
         f.write(f"Train Accuracy: {train_accuracy:.2f} | Val Accuracy: {val_accuracy:.2f} |Test Accuracy: {test_accuracy:.2f}\n")
-        f.write(f"Train Loss: {train_loss:.2f} | Val Loss: {val_loss:.2f} | Test Loss: {test_loss:.2f}\n")
+        f.write(f"Train Loss: {train_loss/train_total:.2f} | Val Loss: {val_loss/val_total:.2f} | Test Loss: {test_loss/test_total:.2f}\n")
         f.write(f"Inference time: {total_time:.2f}\n")
         f.write(f"Confusion Matrix: {conf_matrix}\n")
 
