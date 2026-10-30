@@ -128,8 +128,9 @@ True confidence: 0.75 (Var: 0.0155, Std: 0.1243)
 False confidence: 0.70 (Var: 0.0149, Std: 0.1221)  
 Precision: 0.59  
 Recall: 0.88  
-Test Accuracy: 0.64  
-Inference time: 12.04  
+Train Accuracy: 0.89 | Val Accuracy: 0.91 |Test Accuracy: 0.64  
+Train Loss: 0.38 | Val Loss: 0.40 | Test Loss: 0.68  
+Inference time: 9.38  
 Confusion Matrix: tensor([[1828., 2712.], [ 535., 3925.]], device='cuda:0')  
 
 Losses:  
@@ -148,8 +149,9 @@ True confidence: 0.86 (Var: 0.0140, Std: 0.1181)
 False confidence: 0.80 (Var: 0.0176, Std: 0.1328)  
 Precision: 0.64  
 Recall: 0.88  
-Test Accuracy: 0.70  
-Inference time: 9.16  
+Train Accuracy: 0.92 | Val Accuracy: 0.94 |Test Accuracy: 0.70  
+Train Loss: 0.33 | Val Loss: 0.34 | Test Loss: 0.73  
+Inference time: 9.52  
 Confusion Matrix: tensor([[2366., 2174.], [ 514., 3946.]], device='cuda:0')  
 
 Losses:  
