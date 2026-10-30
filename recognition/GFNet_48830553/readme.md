@@ -42,6 +42,18 @@ Flags:
 
 After installing the dependencies within a python environment, run "train.py" with appropriate flags ("RN18" for ResNet18, "GFNET" for GFNet) to train either a ResNet18 model or a GFNet model. Run "predict.py" with appropriate flags ("RN18" for ResNet18, "GFNET" for GFNet, "BEST" for model with highest validation accuracy, "LATEST" for latest saved model)to test a ResNet18 model or a GFNet model to analyse performance.
 
+#### Training
+
+```bash
+python train.py --model "GFNET"
+```
+
+#### Inference
+
+```bash
+python predict.py --model "GFNET" --version "BEST"
+```
+
 ## Introduction
 
 ### Problem
@@ -172,7 +184,7 @@ Secondly, the GFNet was not able to attain the 80% test accuracy minimum perform
 
 Thirdly, by analysing the confidence spreads in the graph, it is clear that there is significant overlap between true predictions and false confidences. Therefore, it is not possible to cleanly differentiate wrong confidences/probabilities and correct confidences/probabilities. The overconfidence nature of machine learning models is not solvable with a simple confidence threshold based on this current GFNet model.  
 
-Forthly, when analysing the false predictions with the true predictions, it appears the GFNet model may not be able to analyse the grooves of the brain in great detail. This inability to analyse the grooves may be caused by the global nature of the filters in the GFNet model, which lacks the ability to analyse local features. Furthermore, when analysing the false negatives, a completely different MRI scan type was identified in the test dataset, which could have contributed to the overall lower performance of the GFNet and ResNet18 models.
+Forthly, when analysing the false predictions with the true predictions, it appears the GFNet model may not be able to analyse the grooves of the brain in great detail. This inability to analyse the grooves may be caused by the global nature of the filters in the GFNet model, which lacks the ability to analyse local features. Furthermore, when analysing the false negatives, a completely different MRI scan type was identified in the test dataset, which could have contributed to the overall lower performance of the GFNet and ResNet18 models. Furthermore, transformers may perform worse in small datasets which could be the case for the provided training dataset [4].
 
 ## Conclusion
 
@@ -229,11 +241,13 @@ To demonstrate that a model can reliably determine cancer/normal organs with an 
 
 ## References
 
-[1] T. Shahriar, "Comparative Analysis of Lightweight Deep Learning Models for Memory-Constrained Devices," *arXiv preprint arXiv:2505.03303*, May 2025. [Online]. Available: [https://arxiv.org/html/2505.03303v1](https://arxiv.org/html/2505.03303v1)
+[1] T. Shahriar, "Comparative Analysis of Lightweight CNNs for Resource-Constrained Devices: Predictive Performance, Efficiency Trade-offs, and Initialization Effects," *arXiv preprint arXiv:2505.03303*, 2025. [Online]. Available: [https://arxiv.org/abs/2505.03303](https://arxiv.org/abs/2505.03303)
 
-[2] Y. Rao, W. Zhao, Z. Zhu, J. Lu, and J. Zhou, "Global Filter Networks for Image Classification," *arXiv preprint arXiv:2107.00645*, Oct. 2021. [Online]. Available: [https://arxiv.org/abs/2107.00645](https://arxiv.org/abs/2107.00645)
+[2] Y. Rao, W. Zhao, Z. Zhu, J. Lu, and J. Zhou, "Global Filter Networks for Image Classification," *arXiv preprint arXiv:2107.00645*, 2021. [Online]. Available: [https://arxiv.org/abs/2107.00645](https://arxiv.org/abs/2107.00645)
 
-[3] Duponte, "False negatives, the hidden risk in rapid diagnostics," Nov. 2025. [Online]. Available: [https://duponteadn.com/en/false-negatives-the-hidden-risk-in-rapid-diagnostics/](https://duponteadn.com/en/false-negatives-the-hidden-risk-in-rapid-diagnostics/)
+[3] Duponte, "False negatives: The hidden risk in rapid diagnostics," Duponte, Nov. 2025. [Online]. Available: [https://duponteadn.com/en/false-negatives-the-hidden-risk-in-rapid-diagnostics/](https://duponteadn.com/en/false-negatives-the-hidden-risk-in-rapid-diagnostics/)
+
+[4] N. Park and S. Kim, "How Do Vision Transformers Work?," *arXiv preprint arXiv:2202.06709*, 2022. [Online]. Available: [https://arxiv.org/abs/2202.06709](https://arxiv.org/abs/2202.06709)
 
 ## AI Reference
 
